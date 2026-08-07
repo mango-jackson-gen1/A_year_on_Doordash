@@ -1,0 +1,1896 @@
+<!-- The originial version of this template was made by Johnathan Soma and then messed with and customized by Aaron Reiss -->
+
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>A Year on DoorDash</title>
+    <style>
+      /* ===================================================================
+         DESIGN TOKENS — the only place a color, a type size or a margin is
+         allowed to be written as a literal. Everything below this block, in
+         the CSS and in both charts' JavaScript, refers back to these names.
+
+         The color values are not chosen; they are sampled from the map
+         (images/anno1.png, images/anno3.png), which is the one element on
+         this page whose palette came from OpenMapTiles rather than from a
+         preference. See STYLE-SYSTEM.md for the sampling procedure and the
+         two contrast-driven adjustments.
+         =================================================================== */
+
+      :root {
+        /* ── color, sampled from the map ──────────────────────────────── */
+        --field:       #edcce1; /* land, in focus — the ordinary */
+        --field-soft:  #f8eef4; /* block/park fill — the quietest tint */
+        --dim:         #b199a6; /* land, out of focus */
+        --water:       #c5dadf; /* water */
+        --accent:      #a8264e; /* highlight core #99394c, raised to 4.5:1 */
+        --accent-soft: #f693b3; /* highlight halo */
+        --accent-tint: #f4dce6; /* accent at ~12% on white */
+        --marker:      #0e9382; /* home icon #00c8b3, lowered to 3:1 */
+        --ink:         #231c26; /* dot charcoal, warmed toward the field */
+        --ink-muted:   #6b6070;
+        --rule:        #e4d6e0;
+        --surface:     #ffffff;
+        --scrim:       rgba(35, 28, 38, 0.62);
+
+        /* The one CATEGORICAL pair on the page — Solo vs Double Dash. Both
+           sit inside the map's hue family. Validated against the six checks:
+           lightness band, chroma floor, CVD separation (ΔE 18.6 deutan),
+           normal-vision floor (ΔE 19.5) and 3:1 on the surface all pass. */
+        --series-solo:   #d4739f;
+        --series-double: var(--accent);
+
+        --shadow-card: 0 1px 2px rgba(35, 28, 38, 0.06),
+                       0 10px 28px rgba(35, 28, 38, 0.09);
+
+        /* ── type: serif is what you read, sans is what you look up ───── */
+        --font-serif: Georgia, "Times New Roman", Times, serif;
+        --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI",
+          "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+        --fs-display: clamp(2.25rem, 5vw, 3.5rem);
+        --fs-stat:    clamp(3rem, 5.6vw, 4.75rem);
+        --fs-h2:      clamp(1.35rem, 2.2vw, 1.75rem);
+        --fs-lead:    1.3125rem; /* 21px — the nut graf only */
+        --fs-body:    1.125rem;  /* 18px — every other paragraph */
+        --fs-small:   0.875rem;  /* 14px — captions, notes, chart labels */
+        --fs-micro:   0.75rem;   /* 12px — eyebrow, uppercase meta */
+
+        /* ── measure and grid ─────────────────────────────────────────── */
+        --measure: 34rem;  /* ~68 characters at 18px Georgia */
+        --content: 1180px; /* full width for figures */
+        --gutter:  1.5rem;
+
+        /* A second, wider measure — the nut graf only. At --measure and 21px
+           the intro ran eight lines, a tall narrow slab; this sets it five.
+           48rem is the widest setting that still buys a line: 52rem and 64rem
+           both wrap to the same five, so they spend width for nothing, and
+           58rem reaches four only at ~95 characters, past the point where the
+           eye can find the start of the next line. Not for body text, which
+           stays on --measure. */
+        --measure-lead: 48rem;
+
+        /* The left spine. Every figure on this page is a --content-wide box
+           centred with `margin: 0 auto`, so its inner edge sits at
+           (parentWidth − content) / 2 + gutter. This reproduces that number
+           for elements that are NOT inside such a box — the headline and the
+           narrative paragraphs — so prose starts on exactly the same vertical
+           line as the spending readout, the step cards and the chart.
+
+           The percentage resolves against the element's containing block, not
+           the viewport, so it stays correct with a classic scrollbar present —
+           which `100vw` would not. */
+        --spine: max(
+          var(--gutter),
+          calc((100% - var(--content)) / 2 + var(--gutter))
+        );
+
+        /* ── spacing: 8px ladder, nothing off it ──────────────────────── */
+        --sp-xs:  0.5rem;
+        --sp-sm:  1rem;
+        --sp-md:  1.5rem;
+        --sp-lg:  2.5rem;
+        --sp-xl:  4rem;
+        --sp-2xl: 6rem;
+
+        /* Scroll DURATION, not spacing — how long a beat takes to pass.
+           Deliberately not on the ladder above. */
+        --step-gap: 25rem;
+
+        /* The lead-in before card one and the tail after the last card. Both
+           are measured against the pinned 100vh map rather than against the
+           text, so both carry a vh term: a taller viewport both shows the map
+           for longer before the first card and takes longer to carry the last
+           card off the top of the screen.
+
+           The tail's fixed 25rem is the beat the last card is owed — the same
+           one --step-gap gives every other card — and the 40vh on top of it is
+           what keeps the map pinned until that card has actually left. Written
+           as a flat 50rem this held at laptop sizes but collapsed toward zero
+           on a very tall window or a zoomed-out browser, where vh grows and
+           rem does not: exactly the bug this pair is here to prevent.
+
+           Changing either value retimes the section — read the note on
+           .scrolly-overlay first. */
+        --step-lead: 70vh;
+        --step-tail: calc(25rem + 40vh);
+
+        /* The pinned height of the spending stage. It used to be a flat 100vh,
+           which is what put ~285px of dead air above and below the readout:
+           the content is only ~300–370px tall across the desktop range, and
+           `align-items: center` floated it in the middle of a 900px box. While
+           the stage is PINNED that centring is right — but at the two seams,
+           where the section meets the headline above and the intro below, it
+           read as a hole. Sizing the stage to the content and centring the
+           stage itself in the viewport (see .spend-stage's `top`) keeps the
+           pinned view identical and closes both seams.
+
+           26rem clears the tallest measured content (367px, at the full
+           --content rail) with a little room. If content ever exceeds it the
+           overflow is symmetrical, so the pinned view still looks centred. */
+        --stage-h: 26rem;
+      }
+
+      /* ===================================================================
+         PAGE BASE
+         =================================================================== */
+
+      body {
+        margin: 0;
+        background: var(--surface);
+        color: var(--ink);
+        font-family: var(--font-serif);
+        font-size: var(--fs-body);
+        line-height: 1.65;
+        -webkit-font-smoothing: antialiased;
+      }
+
+      /* The prose rail. `max-width: 50%` used to live here — a percentage
+         measure sets a 120-character line on a wide monitor and a 60-character
+         one on a laptop, so no type size could be right at both. */
+      h1 {
+        max-width: var(--measure);
+        margin: var(--sp-xl) auto var(--sp-lg) var(--spine);
+        font-size: var(--fs-display);
+        line-height: 1.08;
+        letter-spacing: -0.022em;
+        color: var(--ink);
+      }
+
+      /* The min() is the narrow-screen floor. A spine-aligned paragraph gets
+         its gutter from --spine, but a CENTRED one (.prose-center below) has
+         auto margins, and auto resolves to zero the moment the viewport is
+         narrower than the measure — which would run the text into both screen
+         edges. Capping the measure at "viewport minus a gutter each side"
+         keeps that from happening. It is a no-op on desktop, where --measure
+         is far the smaller of the two. */
+      p {
+        max-width: min(var(--measure), 100% - 2 * var(--gutter));
+        margin: 0 auto var(--sp-md) var(--spine);
+        font-family: var(--font-serif);
+        font-size: var(--fs-body);
+        line-height: 1.65;
+        color: var(--ink);
+      }
+
+      /* The nut graf carries the reader in, so it gets the one step up.
+         Nothing else on the page uses --fs-lead or --measure-lead — the wider
+         measure runs with the larger type, so the two travel together. */
+      p.lede {
+        max-width: min(var(--measure-lead), 100% - 2 * var(--gutter));
+        font-size: var(--fs-lead);
+        line-height: 1.55;
+      }
+
+      /* Deliberately OFF the left spine: this run of paragraphs is centred on
+         the page instead. The `p` rule above is shorthand, so it has already
+         set margin-right to auto — overriding the left side is the whole job,
+         because auto on both sides against a --measure max-width is what
+         centres a block.
+
+         The lines inside stay left-aligned. Only the column moves; the measure
+         is untouched, so line length and rag are exactly as before. */
+      p.prose-center {
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      /* ===================================================================
+         HERO — the two food cut-outs under the headline
+         =================================================================== */
+
+      /* Centred on the page rather than run out from the left spine. Once
+         --hero-scale pulled the pair in to 792px, holding it against the spine
+         left a third of the page empty to its right and the two cut-outs read
+         as having drifted off the left edge; auto margins on both sides put
+         the pair on the page's own centre line instead. This is the same move
+         .prose-center makes further up.
+
+         --hero-scale shrinks the whole composition. It is applied to the RAIL
+         and the gap together, NOT to the images: at `width: 70%` inside
+         unchanged columns the two cut-outs would shrink while the gap between
+         them stayed put, tripling the space in the middle and breaking the
+         pair into two stranded objects. Scaling the track scales the group.
+
+         The min() is the narrow-screen floor. It matters more here than it
+         would on a spine-anchored block: auto margins resolve to ZERO once the
+         viewport is narrower than the hero, so without the cap the images
+         would run into both screen edges. */
+      .hero {
+        --hero-scale: 0.7;
+
+        max-width: min(
+          calc((var(--content) - 2 * var(--gutter)) * var(--hero-scale)),
+          calc(100% - 2 * var(--gutter))
+        );
+        margin: 0 auto var(--sp-xl);
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: calc(var(--sp-lg) * var(--hero-scale));
+        /* The two cut-outs are different shapes and different heights. Baseline
+           or stretch would either float one of them or distort it; centring
+           lets them hang off a shared middle, which is how a pair of loose
+           objects on a surface actually reads. */
+        align-items: center;
+      }
+
+      .hero__item {
+        /* The columns are ~546px at the design viewport and the smaller export
+           is 597px wide, so both are scaled DOWN — neither is ever enlarged
+           past its pixels. */
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      @media only screen and (max-width: 600px) {
+        .hero {
+          grid-template-columns: 1fr;
+          gap: var(--sp-md);
+          margin-bottom: var(--sp-lg);
+        }
+      }
+
+      /* ===================================================================
+         MOBILE WARNING MODAL
+         =================================================================== */
+
+      .modal {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: var(--scrim);
+        justify-content: center;
+        align-items: center;
+        z-index: 9999;
+      }
+
+      .modal-content {
+        background: var(--surface);
+        padding: var(--sp-lg);
+        max-width: 25rem;
+        border-radius: 8px;
+        border-top: 3px solid var(--accent);
+        text-align: left;
+        font-family: var(--font-sans);
+        font-size: var(--fs-small);
+        line-height: 1.55;
+        color: var(--ink);
+        box-shadow: var(--shadow-card);
+      }
+
+      /* The card's copy is a bare <span>, so without this the button flows
+         inline at the end of the last sentence. */
+      .modal button {
+        display: block;
+        margin-top: var(--sp-md);
+        padding: var(--sp-xs) var(--sp-sm);
+        font-family: var(--font-sans);
+        font-size: var(--fs-small);
+        color: var(--surface);
+        background: var(--accent);
+        border: 0;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+
+      /* ===================================================================
+         SCROLLYTELLING MAP
+         =================================================================== */
+
+      #scrolly {
+        position: relative;
+        padding: 0;
+      }
+
+      /* On the spine, like the prose above it — the step cards and the
+         paragraphs that introduce them share one left edge.
+
+         Narrower than --measure on purpose: this column shares its row with
+         the map, whose left edge is set in vw by #zoomBox. At 34rem the cards
+         would run under the map from about 1400px up. 26rem clears it at every
+         width where the map is shown at all. */
+      .scrolly-overlay {
+        position: relative;
+        max-width: 26rem;
+        margin-left: var(--spine);
+        margin-right: auto;
+
+        /* The cards and the pinned map have to occupy the SAME band of scroll,
+           not two consecutive ones. .sticky-thing is a 100vh block sitting
+           above this column in flow, so left alone the first card begins a
+           full viewport below the point where the map pins. That cost the
+           section at both ends: half a viewport of empty pinned map before any
+           text arrived, and — because every card inherited the same 900px
+           push — the third card's trigger fell 258px PAST the end of the
+           sticky track, so the map had already scrolled away by the time
+           step three fired and its annotation was never seen.
+
+           -100vh puts this column's top back on #scrolly's top, and the lead
+           below then buys the deliberate beat of map-only before card one. */
+        margin-top: -100vh;
+        padding-top: var(--step-lead);
+
+        /* Tail track, so the last card is read with the map still pinned
+           behind it. This has to be padding on the column rather than margin
+           on the card — see .step:last-child. */
+        padding-bottom: var(--step-tail);
+      }
+
+      .sticky-thing {
+        position: -webkit-sticky;
+        position: sticky;
+        left: 0;
+        width: 100%;
+        margin: 0;
+        z-index: 0;
+        top: 0;
+        height: 100vh;
+        /* Center everything inside */
+        display: flex;
+        justify-content: center;
+        flex-direction: column;
+        justify-content: center;
+      }
+
+      /* A step card is the page's version of the map's highlight: a pale
+         surface with one crimson edge, the same "look here" the halo does
+         around a dot. The 3px red debug border it shipped with is gone, as
+         is the duplicate background-color declaration under it. */
+      .step {
+        margin: 0 auto var(--step-gap);
+        background-color: var(--surface);
+        color: var(--ink);
+        text-align: left;
+        border: 0;
+        border-left: 3px solid var(--accent);
+        border-radius: 0 4px 4px 0;
+        box-shadow: var(--shadow-card);
+      }
+
+      /* The last card has no next card to space itself away from, and its
+         bottom margin was doing active harm: with nothing to contain it, it
+         collapsed straight out of #scrolly and became blank space before the
+         paragraph that follows the section — so it lengthened the page without
+         lengthening the sticky track, and step three got no dwell at all. The
+         tail is .scrolly-overlay's padding-bottom instead, which is inside
+         #scrolly and therefore does extend the track. */
+      .step:last-child {
+        margin-bottom: 0;
+      }
+
+      .step p {
+        max-width: none;
+        margin: 0;
+        padding: var(--sp-md);
+        font-size: var(--fs-body);
+        line-height: 1.6;
+      }
+
+      /* Hand-tuned to the Illustrator artboards, not to the grid — moving
+         this to the token scale would re-crop the map. The !important flags
+         are gone: nothing else targets #zoomBox, so they did nothing. */
+      #zoomBox {
+        overflow: clip;
+        margin-left: 44vw;
+        max-width: 53vw;
+        max-height: none;
+      }
+
+      .photoDiv {
+        width: 100%;
+        margin-right: 0;
+        margin-left: auto;
+        display: block;
+        transition:
+          margin 1.5s 0s,
+          transform 2.5s 0s;
+      }
+
+      /* ===================================================================
+         One year of delivery spending — a scroll-scrubbed counter.
+         The number is driven by scroll POSITION, not triggered on entry:
+         scrolling this section IS the year passing, Jul 2025 -> Jul 2026,
+         and the dollar figure is the real running total on that date.
+         =================================================================== */
+
+      /* This section used to redefine --accent, --ink, --muted and --rule
+         locally, which is how the page ended up with a red (#ef2a39) that
+         appears nowhere on the map. The local block is gone; the tokens now
+         resolve to the :root values above. */
+      .spend-scrolly {
+        position: relative;
+        height: 460vh; /* the scroll track — this is how long the year feels */
+        /* Matches the headline's own bottom margin above it, so the section is
+           bracketed by equal space instead of sitting in a --sp-2xl well. */
+        margin: 0 0 var(--sp-lg) 0;
+        color: var(--ink);
+      }
+
+      /* Pinned for the whole track, so the number never leaves the screen
+         while it is counting.
+
+         `top` is what centres the stage in the viewport now that it is no
+         longer a full 100vh tall: half the leftover viewport above, half
+         below, so the readout sits exactly where it did before while the
+         section's flow box is ~485px shorter at each seam. It has to be a
+         calc rather than a percentage — a percentage `top` on a sticky
+         element resolves against the containing block, which here is the
+         460vh track, not the viewport. */
+      .spend-stage {
+        position: sticky;
+        top: calc((100vh - var(--stage-h)) / 2);
+        height: var(--stage-h);
+        max-width: var(--content);
+        margin: 0 auto;
+        padding: 0 var(--gutter);
+        /* Without this the gutter is added OUTSIDE the 1180px, and the
+           readout lands a gutter's width left of --spine. */
+        box-sizing: border-box;
+        display: grid;
+        grid-template-columns: minmax(0, 0.82fr) minmax(0, 1fr);
+        gap: 3.5vw;
+        align-items: center;
+      }
+
+      .spend-readout {
+        min-width: 0;
+      }
+
+      /* Meta, not prose — so it wears the sans, like the map's own labels.
+         Each of these also re-declares max-width, because the page-wide `p`
+         rule puts every paragraph on the 34rem prose rail and these sit in a
+         grid track instead. */
+      .spend-readout__date {
+        font-family: var(--font-sans);
+        font-size: var(--fs-small);
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
+        margin: 0 0 var(--sp-xs) 0;
+        padding: 0;
+        max-width: none;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .spend-readout__stat {
+        display: block;
+        font-family: var(--font-sans);
+        font-size: var(--fs-stat);
+        font-weight: 700;
+        line-height: 0.92;
+        letter-spacing: -0.04em;
+        color: var(--accent);
+        font-variant-numeric: tabular-nums; /* digits must not wobble */
+      }
+
+      .spend-readout__caption {
+        display: block;
+        font-family: var(--font-sans);
+        font-size: var(--fs-small);
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
+        margin-top: var(--sp-xs);
+      }
+
+      .spend-readout__body {
+        font-size: var(--fs-body);
+        line-height: 1.6;
+        margin: var(--sp-md) 0 0 0;
+        padding: 0;
+        max-width: var(--measure);
+      }
+
+      /* Position through the year — keeps the reader oriented during the
+         stretches where no orders happened and the number sits still. Pale
+         field, crimson emphasis: the map's grammar, one pixel tall. */
+      .spend-readout__track {
+        height: 3px;
+        background: var(--field);
+        margin: var(--sp-md) 0 var(--sp-xs) 0;
+        max-width: var(--measure);
+      }
+
+      .spend-readout__fill {
+        height: 100%;
+        width: 0%;
+        background: var(--accent);
+      }
+
+      .spend-readout__orders {
+        font-family: var(--font-sans);
+        font-size: var(--fs-micro);
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        color: var(--ink-muted);
+        margin: 0;
+        padding: 0;
+        max-width: none;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .spend-chart {
+        min-width: 0; /* stops the SVG from blowing out the grid track */
+      }
+
+      .spend-chart svg {
+        display: block;
+        width: 100%;
+        height: auto;
+        font-family: var(--font-sans);
+        font-variant-numeric: tabular-nums;
+      }
+
+      /* Marks the SVG authors inline. Presentation attributes cannot hold a
+         var(), so the colors are set here instead of on the elements — and
+         since a CSS rule beats a presentation attribute, the sizes come from
+         the same place. This SVG's viewBox is 560 units wide in a ~573px
+         track, so a unit here is very nearly a pixel; unlike the Double Dash
+         chart, it needs no scale correction. --dim is the baseline on both
+         charts. */
+      .spend-chart .spend-baseline {
+        stroke: var(--dim);
+      }
+
+      .spend-chart #spendTicks {
+        fill: var(--ink-muted);
+        font-size: 14px; /* --fs-small, in viewBox units */
+      }
+
+      .spend-chart #spendTicks .spend-year {
+        font-size: 12px; /* --fs-micro */
+      }
+
+      .spend-chart #spendMonthNote {
+        fill: var(--accent);
+        font-size: 13px;
+      }
+
+      @media only screen and (max-width: 800px) {
+        .spend-scrolly {
+          height: 380vh;
+        }
+
+        .spend-stage {
+          grid-template-columns: 1fr;
+          grid-template-rows: auto auto;
+          align-content: center;
+          gap: var(--sp-md);
+          background: var(--surface);
+
+          /* Back to a full-viewport stage here. Once the readout and the chart
+             stack they are together taller than --stage-h, so the compact
+             stage would be overflowed rather than merely roomy — and there is
+             no dead air to reclaim at this width anyway. */
+          top: 0;
+          height: 100vh;
+        }
+
+        .spend-chart {
+          order: -1;
+        }
+
+        .spend-readout__body {
+          font-size: var(--fs-small);
+        }
+      }
+
+      /* When it's less than 700 pixels wide, do normal scrollytelling */
+      @media only screen and (min-width: 700px) {
+        #scrolly.side-by-side {
+          display: flex;
+        }
+
+        #scrolly.side-by-side > div {
+          flex-basis: 0;
+          flex-grow: 1;
+          flex-shrink: 1;
+          /* Vertical only: horizontal offset is the spine's job, and adding
+             padding here would push the step cards off it. */
+          padding: var(--sp-sm) 0;
+        }
+
+        #scrolly.side-by-side .scrolly-overlay {
+          margin-top: 70vh;
+          order: 0;
+          /* Change these to adjust sizing options */
+          min-width: 15rem;
+          max-width: 20rem;
+        }
+
+        #scrolly.side-by-side .sticky-thing {
+          order: 1;
+          flex-grow: 2;
+        }
+      }
+
+      /* ===================================================================
+         DOUBLE DASH STACKED COLUMN CHART — migrated from index3.html.
+         Chart on the left, prose on the right; the two stack into a single
+         column below 860px.
+
+         Everything is scoped to .story-wrap / .story, so nothing leaks into
+         the template above. index3.html's body-level rules (Georgia on the
+         whole page, 4rem padding, min-height 100vh) were preview chrome for
+         a standalone file and are deliberately NOT carried over — they would
+         have restyled this entire page.
+
+         Two declarations exist only to undo the global `p { }` rule near the
+         top of this file. They are marked HOST OVERRIDE.
+         =================================================================== */
+
+      .story-wrap {
+        max-width: var(--content);
+        margin: var(--sp-2xl) auto var(--sp-xl);
+        padding: 0 var(--gutter);
+        box-sizing: border-box;
+      }
+
+      .story {
+        display: grid;
+        grid-template-columns: minmax(0, 1.6fr) minmax(0, 1fr);
+        gap: var(--sp-lg);
+        align-items: center;
+      }
+
+      .story * {
+        box-sizing: border-box;
+      }
+
+      /* CHART — the SVG paints only its legend, axes and values; the framing
+         text lives in the prose column. */
+
+      .chart-figure {
+        margin: 0;
+        padding: 0;
+      }
+
+      /* Chart title. The `h1` rule near the top of this file is h1-only, so
+         nothing needs overriding here. */
+      .chart-title {
+        font-family: var(--font-serif);
+        font-size: var(--fs-h2);
+        line-height: 1.25;
+        font-weight: normal;
+        color: var(--ink);
+        margin: 0 0 var(--sp-md);
+      }
+
+      .chart-figure #chart {
+        width: 100%;
+        height: auto;
+        display: block;
+      }
+
+      /* PROSE */
+
+      .story-text {
+        max-width: var(--measure);
+      }
+
+      /* HOST OVERRIDE: the page-wide `p` rule puts every paragraph on the
+         34rem prose rail with its own gutter. This column is already a grid
+         track, so it re-declares both. */
+      .story-text p {
+        max-width: none;
+        padding: 0;
+        font-size: var(--fs-body);
+        line-height: 1.65;
+        color: var(--ink);
+        margin: 0 0 var(--sp-sm);
+      }
+
+      .story-text p:last-child {
+        margin-bottom: 0;
+      }
+
+      .story .sr-only {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        padding: 0;
+        margin: -1px;
+        overflow: hidden;
+        clip: rect(0, 0, 0, 0);
+        clip-path: inset(50%);
+        white-space: nowrap;
+        border: 0;
+      }
+
+      @media only screen and (max-width: 860px) {
+        .story {
+          grid-template-columns: 1fr;
+          gap: var(--sp-lg);
+        }
+
+        .story-text {
+          max-width: none;
+        }
+      }
+    </style>
+		<script src="https://unpkg.com/intersection-observer@0.5.1/intersection-observer.js"></script>
+	  <script src="https://cdnjs.cloudflare.com/ajax/libs/scrollama/3.0.4/scrollama.min.js"></script>
+	  <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.3.0/d3.min.js"></script>
+  </head>
+
+  <body>
+	<h1>A Year on DoorDash</h1>
+
+  <!-- ========== HERO ==========
+       Two of the year's line items, standing in for the whole receipt. Both
+       are cut-outs on transparent backgrounds, so they sit straight on the
+       page's white surface with no frame or card around them — the pink tag
+       burned into each export is the only chrome they need, and it is already
+       the page's accent.
+
+       Decorative rather than evidential: the numbers on the tags are in the
+       alt text, and the chart below is where the year is actually counted.
+       ================================================================== -->
+  <!-- Wontons first, croissant second — NOT alphabetical or arbitrary. The
+       pink tag is baked into the top-LEFT of the wonton export and the
+       top-RIGHT of the croissant one, so in this order the two tags bookend
+       the pair at the outer corners and the food meets in the middle. Reverse
+       them and both tags collide in the centre while the food is pushed out
+       to the page edges. Swapping these two <img> tags is all it takes. -->
+  <figure class="hero">
+    <img
+      class="hero__item"
+      src="images/food/wonton.png"
+      alt="A bowl of shrimp and pork wontons, tagged like a receipt line: 17 bowls ordered, $167.28 spent."
+      width="597"
+      height="511"
+    >
+    <img
+      class="hero__item"
+      src="images/food/croissant.png"
+      alt="A croissant, tagged like a receipt line: 24 ordered, $96 spent."
+      width="965"
+      height="931"
+    >
+  </figure>
+
+  <!-- ========== One year of delivery spending (scroll-scrubbed) ==========
+       The <section> is a 460vh scroll track; .spend-stage is pinned inside
+       it. Scroll progress maps to a date between Jul 1 2025 and Jul 31 2026,
+       and the number is the real running total of my delivery orders as of
+       that date. $0.00 at the top, $4,345.83 at the bottom.
+       ==================================================================== -->
+  <section class="spend-scrolly" id="spendScrolly">
+    <div class="spend-stage">
+
+      <div class="spend-readout">
+        <p class="spend-readout__date" id="spendDate">Jul 1, 2025</p>
+        <span class="spend-readout__stat" id="spendStat">$0.00</span>
+        <span class="spend-readout__caption">spent on delivery, running total</span>
+        <p class="spend-readout__body">Here is a year through scrolling: July 1, 2025 &ndash; July 31, 2026. Each bar is the total amount I had spent by the end of that month; the solid band on top is what that month alone cost.</p>
+
+        <div class="spend-readout__track">
+          <div class="spend-readout__fill" id="spendFill"></div>
+        </div>
+        <p class="spend-readout__orders"><span id="spendOrders">0</span> of 105 delivery orders</p>
+      </div>
+
+      <div class="spend-chart">
+        <svg id="spendSvg" viewBox="0 0 560 340" role="img"
+             aria-label="One bar per month from July 2025 to July 2026. Each bar's full height is the running total to that point; the solid band on top is what that month alone cost. March 2026 is the largest at $970.12; the year ends at $4,345.83 across 105 orders.">
+
+          <!-- No target line: the reader should not see where this lands
+               until they have scrolled the year -->
+
+          <!-- One pair of rects per month, built in JS:
+               pale = total carried in, solid = what this month added -->
+          <g id="spendBars"></g>
+
+          <line class="spend-baseline" x1="10" y1="286" x2="548" y2="286" stroke-width="1"></line>
+
+          <!-- Floats above the month currently being scrolled through -->
+          <text id="spendMonthNote" font-weight="700"
+                text-anchor="middle" opacity="0"></text>
+
+          <g id="spendTicks"></g>
+        </svg>
+      </div>
+
+    </div>
+  </section>
+
+  <p class="lede prose-center">How much can be mined from studying one&rsquo;s digital footprint? With the European Union&rsquo;s GDPR in place, I wonder how many internet users have actually reached out to request a copy of their data. As an experiment &mdash; since DoorDash falls under US regulations and not GDPR&rsquo;s purview &mdash; I started collecting my receipts from the past year, and here are some of the cumulative findings.</p>
+
+  
+      <section id="scrolly">
+        <div class="sticky-thing">
+          <div id="zoomBox">
+<!-- Sticky Thing 1 goes below this line -->
+            <img id="scrollyPhoto" class="photoDiv" src="images/anno1.png">
+<!-- Sticky Thing 1 goes above this line -->
+          </div>        
+        </div>
+
+        <div class="scrolly-overlay">
+          <div class="step" id="step1">
+            <p>Some of my most visited restaurants are, well shamefully, within walking distance of my house.</p>
+          </div>
+          <div class="step" id="step2">
+            <p>Some of the places I&rsquo;ve ordered from most frequently are Dim Sum Sam, a Cantonese restaurant, about 17 times, and Din Tai Fung, a Taiwanese-Shanghainese restaurant, 8 times.</p>
+          </div>
+          <div class="step" id="step3">
+            <p>Out of the 102 Manhattan delivery orders, there were 32 unique restaurants. Most restaurants clustered in the East Village and around the Nomad/Flatiron area.</p>
+          </div>
+        </div>
+      </section>
+
+      <p class="prose-center">As I investigated the ordering behaviors on the platform further, a phenomenon stood out. As time went on, I couldn&rsquo;t help ordering more and more frequently from DoorDash &mdash; and ordering more food each time &mdash; all because of Double Dash. Double Dash, as the software company claims, &ldquo;lets you add items from a second nearby store or restaurant to your original order within 15 to 20 minutes of checkout, with no extra delivery fee.&rdquo; More than a fifth of my total orders were Double Dash.</p>
+
+      <p class="prose-center">So what do I spend Double Dashing on?</p>
+
+      <p class="prose-center">The thing is, the second store was never a small thing. In my head, it was &ldquo;just grabbing something extra to nibble on.&rdquo; On the receipt, it was on average $27 for each add-on order &mdash; two cream puffs at $13.75 apiece, or a box of cake rolls at $16 &mdash; while my actual dinner that night averaged around $40. So the little extra I tacked on was two-thirds the size of the meal I&rsquo;d actually sat down to order, and about what a whole normal takeout order costs me on its own. Over the year, it added up to $486 &mdash; and I never put much thought into this line item.</p>
+
+      <!-- ========== DOUBLE DASH STACKED COLUMN CHART ==========
+           Migrated whole from index3.html. The prose directly above sets
+           up Double Dash; this chart shows how the habit built month by
+           month. The two must agree on the share — the paragraph says
+           "more than a fifth" and the chart says 19 of 86, or 22%.
+           ===================================================== -->
+      <div class="story-wrap">
+        <div class="story">
+
+          <figure class="chart-figure">
+            <!-- The visible heading is also the chart's accessible title, so it
+                 carries id="chart-title" and the script no longer overwrites it. -->
+            <h2 id="chart-title" class="chart-title">
+              Double Dash increasing trend
+            </h2>
+
+            <svg
+              id="chart"
+              role="img"
+              aria-labelledby="chart-title chart-description"
+            ></svg>
+
+            <p id="chart-description" class="sr-only">
+              A stacked column chart of 86 deliveries between July 2025 and July 2026.
+              Double Dash accounted for 19 of them, rising from none in the first two
+              months to a peak of 7 out of 16 orders in March 2026.
+            </p>
+          </figure>
+
+          <div class="story-text">
+            <p>
+              The frequency of Double Dash orders increased significantly during the
+              latter six months of the analysis. After taking a closer look, it appears
+              I&rsquo;d picked up a habit of ordering a plate of dessert. Among these
+              shops, Lady M&rsquo;s Amedeo chocolate mille-feuille cake was ordered
+              4 times, for a total of 7 pieces, and ando Patisserie&rsquo;s Swiss cake roll
+              was ordered 5 times, for a total of 6 pieces.
+            </p>
+          </div>
+
+        </div>
+      </div>
+
+    <!-- Mobile Warning Modal -->
+    <div id="deviceModal" class="modal">
+      <div class="modal-content">
+        <span>
+          Wow! One of your friends must be in Aaron Reiss's "Telling Stories With Maps" class — how cool! <br><br> Sadly, this site is meant to be viewed on a computer, so if you are on a phone or tablet then it's gonna look all kinds of wonky and you might get the wrong impression about how amazing this work is.
+        </span>
+        <button id="continueBtn">Continue Anyway</button>
+      </div>
+    </div>
+
+<!-- ===== One year of delivery spending, scrubbed by scroll position ===== -->
+<script>
+(function () {
+
+  /* -----------------------------------------------------------------
+     The data: [day index, running total] for all 105 delivery orders.
+     Day 0 = Jul 1 2025. Real receipts — the last pair is the year's
+     total, $4,345.83 on day 390 (Jul 26 2026).
+     ----------------------------------------------------------------- */
+
+  var SERIES = [
+    [30,38.15],[32,75.66],[61,107.36],[65,131.88],[67,204.90],[67,228.78],[71,250.02],[88,280.13],
+    [89,310.05],[89,348.88],[91,374.29],[94,410.45],[97,435.86],[102,468.07],[103,503.54],
+    [104,522.90],[104,574.10],[105,597.68],[106,649.96],[106,731.66],[107,771.55],[113,807.19],
+    [117,848.13],[118,886.18],[118,932.44],[119,932.44],[122,965.38],[123,984.31],[123,1058.04],
+    [125,1136.64],[133,1158.11],[147,1237.57],[147,1314.26],[150,1355.26],[155,1387.98],
+    [157,1446.90],[164,1534.77],[202,1599.94],[202,1625.93],[206,1650.76],[208,1650.76],
+    [212,1678.09],[212,1717.27],[216,1760.64],[219,1784.76],[219,1830.66],[221,1901.45],
+    [221,1921.94],[240,1984.86],[242,2028.23],[246,2046.49],[246,2104.28],[247,2129.11],
+    [249,2154.20],[249,2208.92],[249,2266.71],[250,2309.89],[250,2338.08],[253,2361.12],
+    [253,2412.28],[253,2446.20],[254,2509.12],[255,2534.03],[256,2559.44],[256,2593.60],
+    [257,2644.56],[258,2675.88],[258,2738.80],[260,2796.59],[261,2859.51],[261,2907.11],
+    [270,2967.03],[270,2998.35],[274,3033.94],[278,3087.29],[282,3129.43],[283,3161.81],
+    [286,3182.43],[304,3251.59],[305,3284.63],[314,3309.08],[315,3389.84],[318,3462.54],
+    [319,3517.23],[326,3593.38],[328,3622.44],[329,3639.86],[329,3663.38],[331,3684.78],
+    [331,3713.16],[331,3713.16],[337,3746.32],[337,3776.12],[340,3820.03],[341,3845.14],
+    [341,3879.33],[342,3909.44],[348,3947.80],[348,4003.42],[351,4042.50],[360,4097.81],
+    [370,4136.89],[376,4196.23],[383,4260.41],[390,4345.83]
+  ];
+
+  var SPAN_DAYS = 395;                   // Jul 1 2025 -> Jul 31 2026
+  var START_DATE = new Date(2025, 6, 1); // month is 0-indexed
+  var TOTAL = SERIES[SERIES.length - 1][1];
+
+  var REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* The bars are built in JS, so their fills are read back out of the design
+     tokens rather than written here — one source of truth for every color on
+     the page. This chart is SEQUENTIAL, not categorical: base and cap are the
+     same measure at two depths, so they take one hue, light to dark. */
+
+  function token(name) {
+    return getComputedStyle(document.documentElement)
+      .getPropertyValue(name).trim();
+  }
+
+  var FIELD  = token("--field");   /* carried in before this month */
+  var ACCENT = token("--accent");  /* what this month alone added */
+
+  /* -----------------------------------------------------------------
+     The months, from cumulative-123orders.csv. cum = running total at
+     the END of that month; the monthly figure is the gap between two
+     neighbours, so the solid caps always sum to $4,345.83 exactly.
+     day = first day of the month, counted from Jul 1 2025.
+     ----------------------------------------------------------------- */
+
+  var MONTHS = [
+    { label: "Jul", year: "2025", day:   0, cum:   38.15 },
+    { label: "Aug", year: "",     day:  31, cum:  107.36 },
+    { label: "Sep", year: "",     day:  62, cum:  374.29 },
+    { label: "Oct", year: "",     day:  92, cum:  965.38 },
+    { label: "Nov", year: "",     day: 123, cum: 1355.26 },
+    { label: "Dec", year: "",     day: 153, cum: 1534.77 },
+    { label: "Jan", year: "2026", day: 184, cum: 1717.27 },
+    { label: "Feb", year: "",     day: 215, cum: 2028.23 },
+    { label: "Mar", year: "",     day: 243, cum: 2998.35 },
+    { label: "Apr", year: "",     day: 274, cum: 3182.43 },
+    { label: "May", year: "",     day: 304, cum: 3713.16 },
+    { label: "Jun", year: "",     day: 335, cum: 4097.81 },
+    { label: "Jul", year: "",     day: 365, cum: 4345.83 }
+  ];
+
+  var MONTH_NAMES = ["July", "August", "September", "October", "November",
+    "December", "January", "February", "March", "April", "May", "June", "July"];
+
+  var section  = document.getElementById("spendScrolly");
+  var statEl   = document.getElementById("spendStat");
+  var dateEl   = document.getElementById("spendDate");
+  var ordersEl = document.getElementById("spendOrders");
+  var fillEl   = document.getElementById("spendFill");
+  var barsEl   = document.getElementById("spendBars");
+  var noteEl   = document.getElementById("spendMonthNote");
+  var ticksEl  = document.getElementById("spendTicks");
+
+  if (!section || !statEl) return;
+
+  /* ----------------------------- geometry ----------------------------- */
+
+  var PLOT_LEFT = 10, PLOT_RIGHT = 548;
+  var PLOT_TOP  = 30, PLOT_BOTTOM = 286;
+  var PLOT_W = PLOT_RIGHT - PLOT_LEFT;
+  var PLOT_H = PLOT_BOTTOM - PLOT_TOP;
+
+  function Y(value) { return PLOT_BOTTOM - (value / TOTAL) * PLOT_H; }
+
+  var SVG_NS = "http://www.w3.org/2000/svg";
+  var GAP = 10;
+  var BAR_W = (PLOT_W - GAP * (MONTHS.length - 1)) / MONTHS.length;
+
+  function barX(index) { return PLOT_LEFT + index * (BAR_W + GAP); }
+
+  /* Two rects per month, sharing one y-scale:
+       base = everything carried in before this month  (pale)
+       cap  = what this month alone added              (solid)
+     So the bar's total height is the running total, the cap height is
+     the month, and the caps stack to the year's total by construction.
+     No second axis, nothing to mislead. */
+  function buildBars() {
+    MONTHS.forEach(function (month, i) {
+      month.base = document.createElementNS(SVG_NS, "rect");
+      month.base.setAttribute("x", barX(i).toFixed(2));
+      month.base.setAttribute("width", BAR_W.toFixed(2));
+      month.base.setAttribute("fill", FIELD);
+
+      month.cap = document.createElementNS(SVG_NS, "rect");
+      month.cap.setAttribute("x", barX(i).toFixed(2));
+      month.cap.setAttribute("width", BAR_W.toFixed(2));
+      month.cap.setAttribute("fill", ACCENT);
+
+      barsEl.appendChild(month.base);
+      barsEl.appendChild(month.cap);
+
+      // What this month added, and where it starts from
+      month.start = i === 0 ? 0 : MONTHS[i - 1].cum;
+      month.spend = month.cum - month.start;
+      month.name = MONTH_NAMES[i];
+    });
+  }
+
+  function buildTicks() {
+    MONTHS.forEach(function (month, i) {
+      var letter = document.createElementNS(SVG_NS, "text");
+      letter.setAttribute("x", (barX(i) + BAR_W / 2).toFixed(2));
+      letter.setAttribute("y", 304);
+      letter.setAttribute("text-anchor", "middle");
+      letter.textContent = month.label;
+      ticksEl.appendChild(letter);
+
+      if (!month.year) return;
+
+      var year = document.createElementNS(SVG_NS, "text");
+      year.setAttribute("x", (barX(i) + BAR_W / 2).toFixed(2));
+      year.setAttribute("y", 322);
+      year.setAttribute("text-anchor", "middle");
+      year.setAttribute("class", "spend-year"); // sized in CSS, with the rest
+      year.textContent = month.year;
+      ticksEl.appendChild(year);
+    });
+  }
+
+  /* -------------------------- data lookup ----------------------------- */
+
+  // Cached pointer: the reader only moves a step or two per frame, so this
+  // walks instead of searching, and works scrubbing in either direction.
+  var cursor = 0;
+
+  function ordersThrough(day) {
+    while (cursor < SERIES.length && SERIES[cursor][0] <= day) cursor++;
+    while (cursor > 0 && SERIES[cursor - 1][0] > day) cursor--;
+    return cursor;
+  }
+
+  /* --------------------------- formatting ----------------------------- */
+
+  function money(value) {
+    return "$" + value.toLocaleString("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2
+    });
+  }
+
+  function dateLabel(day) {
+    var date = new Date(START_DATE.getTime());
+    date.setDate(date.getDate() + Math.floor(day));
+    return date.toLocaleDateString("en-US", {
+      month: "short", day: "numeric", year: "numeric"
+    });
+  }
+
+  /* ------------------------- scroll -> progress ------------------------ */
+
+  /* The stage is pinned from the moment its sticky offset meets the section's
+     top until the section's bottom can no longer hold it, and the year has to
+     run across exactly that window — otherwise the number is still climbing
+     after the stage has let go, or finishes early and sits there.
+
+     While the stage was a flat 100vh at top:0 both terms fell out of the
+     arithmetic, which is why this read `offsetHeight - innerHeight`. The stage
+     is now shorter than the viewport and offset down to sit in the middle of
+     it, so both are read back off the element instead. Setting --stage-h, or
+     the compact breakpoint restoring a 100vh stage, retimes this for free.
+
+     Cached rather than measured per frame: scrollProgress runs inside a rAF
+     loop and getComputedStyle would force a style flush on every one. */
+
+  var stage = section.querySelector(".spend-stage");
+  var stageTop = 0;
+  var stageHeight = 0;
+
+  function measureStage() {
+    if (!stage) {
+      stageTop = 0;
+      stageHeight = window.innerHeight;
+      return;
+    }
+
+    stageTop = parseFloat(window.getComputedStyle(stage).top) || 0;
+    stageHeight = stage.offsetHeight;
+  }
+
+  function scrollProgress() {
+    var track = section.offsetHeight - stageHeight;
+    if (track <= 0) return 0;
+    var travelled = stageTop - section.getBoundingClientRect().top;
+    return Math.min(Math.max(travelled / track, 0), 1);
+  }
+
+  /* ----------------------------- rendering ---------------------------- */
+
+  var shown = 0;          // the number on screen (eased)
+  var target = 0;         // the number scroll position says it should be
+  var day = 0;
+  var count = 0;
+  var running = false;
+  var visible = false;    // is the section on screen? gates the rAF loop
+
+  function render() {
+    statEl.textContent   = money(shown);
+    dateEl.textContent   = dateLabel(day);
+    ordersEl.textContent = count;
+    fillEl.style.width   = ((day / SPAN_DAYS) * 100).toFixed(2) + "%";
+
+    var active = -1;
+
+    MONTHS.forEach(function (month, i) {
+      // A month's bar appears the moment the reader scrolls into it
+      if (day <= month.day) {
+        month.base.setAttribute("height", 0);
+        month.cap.setAttribute("height", 0);
+        return;
+      }
+
+      active = i;
+
+      // The bar tops out at the running total, so the chart and the big
+      // number are always showing the same instant
+      var top = Math.min(Math.max(shown, month.start), month.cum);
+
+      var baseY = Y(month.start);
+      month.base.setAttribute("y", baseY.toFixed(2));
+      month.base.setAttribute("height", Math.max(0, PLOT_BOTTOM - baseY).toFixed(2));
+
+      var capY = Y(top);
+      month.cap.setAttribute("y", capY.toFixed(2));
+      month.cap.setAttribute("height", Math.max(0, baseY - capY).toFixed(2));
+    });
+
+    if (active < 0) {
+      noteEl.setAttribute("opacity", "0");
+      return;
+    }
+
+    // Running label above the month being scrolled through
+    var month = MONTHS[active];
+    var grown = Math.min(Math.max(shown, month.start), month.cum) - month.start;
+
+    noteEl.setAttribute("opacity", grown > 1 ? "1" : "0");
+    noteEl.setAttribute("x", (barX(active) + BAR_W / 2).toFixed(2));
+    noteEl.setAttribute("y", Math.max(PLOT_TOP - 6, Y(month.start + grown) - 7).toFixed(2));
+    noteEl.textContent = "+" + money(grown);
+  }
+
+  function frame() {
+    var progress = scrollProgress();
+
+    day = progress * SPAN_DAYS;
+    count = ordersThrough(day);
+    target = count ? SERIES[count - 1][1] : 0;
+
+    if (REDUCED_MOTION) {
+      shown = target;
+    } else {
+      // Light catch-up so an $87 order visibly rolls up instead of snapping
+      shown += (target - shown) * 0.18;
+      if (Math.abs(target - shown) < 0.005) shown = target;
+    }
+
+    render();
+
+    // Keep going while the section is on screen, or while the number is
+    // still settling; otherwise park the loop.
+    if (visible || shown !== target) {
+      requestAnimationFrame(frame);
+    } else {
+      running = false;
+    }
+  }
+
+  function start() {
+    if (running) return;
+    running = true;
+    requestAnimationFrame(frame);
+  }
+
+  /* ------------------------------ wiring ------------------------------ */
+
+  new IntersectionObserver(function (entries) {
+    visible = entries[0].isIntersecting;
+    if (visible) start();
+  }).observe(section);
+
+  window.addEventListener("scroll", start, { passive: true });
+
+  // The stage's pinned height and offset are both viewport-relative, so they
+  // have to be re-read before the next frame uses them.
+  window.addEventListener("resize", function () {
+    measureStage();
+    start();
+  });
+
+  buildBars();
+  buildTicks();
+  measureStage();
+  start();
+})();
+</script>
+
+<script>
+
+/* Scrollytelling code goes under here */
+
+  // Preloaded so a card never arrives ahead of its artwork — these are 3.7MB
+  // exports and a cold fetch mid-scroll would show a blank frame.
+  ["images/anno1.png", "images/anno2.png", "images/anno3.png"]
+    .forEach(function(src) { new Image().src = src; })
+
+  // Code for the Photo Div #1 (aka #scrollyPhoto1)
+
+  /* Which annotation belongs to which card.
+     The three exports are a BUILD, not three interchangeable frames:
+
+       anno1  all 32 restaurants labelled, nothing marked
+       anno2  + the home icon, + Dim Sum Sam and Din Tai Fung ringed
+       anno3  + the two cluster circles (Nomad/Flatiron, East Village)
+
+     Each one draws on top of the one before, so they can only ever play in
+     that order — running them in the cards' new order would mean the house
+     and the rings disappearing again partway through.
+
+     So the cards are matched to the build instead. anno1 is the establishing
+     frame the reader already sees while the map pins, before card one; card
+     one then brings in the house, which is what its sentence is about. Card
+     two keeps anno2 and names the two restaurants that frame already rings —
+     it is the one beat with no new artwork, because there is no export that
+     marks those two WITHOUT the house. Card three adds the clusters. */
+
+    // Entering Step One — "within walking distance of my house": the home
+    // icon arrives here, which is why this is anno2 and not anno1.
+  d3.select("#step1").on('stepin',function(e) {
+    console.log("We've arrived at STEP ONE in the photo div")
+    d3.select("#scrollyPhoto").attr("src", "images/anno2.png");
+  })
+
+    // Entering Step Two — "Dim Sum Sam ... Din Tai Fung": already ringed on
+    // anno2. Re-set rather than skipped, so scrolling back up from step three
+    // restores this frame instead of leaving the clusters on screen.
+    d3.select("#step2").on('stepin',function(e) {
+    console.log("We've arrived at STEP TWO in the photo div")
+    d3.select("#scrollyPhoto").attr("src", "images/anno2.png");
+  })
+
+    // Entering Step Three — "clustered in the East Village and around
+    // Nomad/Flatiron": the cluster circles.
+    d3.select("#step3").on('stepin',function(e) {
+    console.log("We've arrived at STEP THREE in the photo div")
+    d3.select("#scrollyPhoto").attr("src", "images/anno3.png");
+  })
+
+</script>
+
+<!-- LEAVE ALONE, scrolly code goes in the section below -->
+<script>
+    const scroller = scrollama();
+
+	scroller
+		.setup({
+			step: "#scrolly .scrolly-overlay .step",
+			offset: 0.5,
+			debug: false
+		})
+		.onStepEnter(function({ element, index, direction}) {
+			const event = new CustomEvent('stepin', { detail: { direction: direction } })
+			element.dispatchEvent(event);
+		})
+		.onStepExit(function({ element, index, direction }) {
+			const event = new CustomEvent('stepout', { detail: { direction: direction } })
+			element.dispatchEvent(event);
+		});
+
+	window.addEventListener("resize", scroller.resize);
+    </script>
+
+
+<!-- ===== Double Dash stacked column chart, migrated from index3.html =====
+     index3.html loaded its own d3 7.8.5. That <script> tag was NOT migrated:
+     this page already loads d3 7.3.0 in the head, and every API used below
+     (selection.join, d3.groups, d3.sum, scaleBand, axisLeft, easeCubicInOut)
+     ships in 7.3.0. Loading both would have left one version as dead weight.
+
+     Everything is wrapped in an IIFE, so no names land on the page's global
+     scope and nothing can collide with the scrollytelling code above. -->
+<script>
+(function () {
+"use strict";
+
+/* ─────────────────────────────────────────────
+   Data
+───────────────────────────────────────────── */
+
+const orderData = [
+  { short: "Jul", year: "2025", full: "July 2025",      solo:  2, double: 0 },
+  { short: "Aug", year: "2025", full: "August 2025",    solo:  2, double: 0 },
+  { short: "Sep", year: "2025", full: "September 2025", solo:  6, double: 1 },
+  { short: "Oct", year: "2025", full: "October 2025",   solo: 12, double: 1 },
+  { short: "Nov", year: "2025", full: "November 2025",  solo:  5, double: 1 },
+  { short: "Dec", year: "2025", full: "December 2025",  solo:  3, double: 0 },
+  { short: "Jan", year: "2026", full: "January 2026",   solo:  2, double: 2 },
+  { short: "Feb", year: "2026", full: "February 2026",  solo:  4, double: 2 },
+  { short: "Mar", year: "2026", full: "March 2026",     solo:  9, double: 7 },
+  { short: "Apr", year: "2026", full: "April 2026",     solo:  5, double: 0 },
+  { short: "May", year: "2026", full: "May 2026",       solo:  9, double: 2 },
+  { short: "Jun", year: "2026", full: "June 2026",      solo:  4, double: 3 },
+  { short: "Jul", year: "2026", full: "July 2026",      solo:  4, double: 0 }
+];
+
+orderData.forEach(d => {
+  d.total = d.solo + d.double;
+});
+
+/* ─────────────────────────────────────────────
+   Settings and state
+───────────────────────────────────────────── */
+
+/* Every color and the label font are read back out of the design tokens in
+   :root, so this chart cannot drift from the rest of the page. See
+   STYLE-SYSTEM.md — the pair is derived from the map and validated there. */
+
+function token(name) {
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue(name).trim();
+}
+
+const soloColor   = token("--series-solo");
+const doubleColor = token("--series-double");
+
+// The map sets its street and place names in a humanist sans, so every piece
+// of look-it-up text here does the same. Prose stays serif.
+const FONT_LABEL = token("--font-sans");
+const INK         = token("--ink");
+const INK_MUTED   = token("--ink-muted");
+const DIM         = token("--dim");
+const SURFACE     = token("--surface");
+const ACCENT_TINT = token("--accent-tint");
+
+const SERIES = [
+  { key: "double", label: "Double Dash", color: doubleColor },
+  { key: "solo",   label: "Solo Order",  color: soloColor }
+];
+
+const Y_MAX = 16;
+const Y_TICKS = [0, 4, 8, 12, 16];
+
+const prefersReducedMotion =
+  window.matchMedia &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ─────────────────────────────────────────────
+   Helpers
+───────────────────────────────────────────── */
+
+const figureNode = document.querySelector(".chart-figure");
+
+// The chart shares a row with the prose, so it is only as wide as its own
+// column — not as wide as the window. Sizing off the container keeps the
+// rendered type legible in both the two-column and the stacked layout, which
+// a window-width breakpoint could not do.
+function isCompact() {
+  const width = figureNode ? figureNode.clientWidth : 0;
+
+  return (width || window.innerWidth) <= 520;
+}
+
+function updateChartAccessibility(target, title, description) {
+  d3.select(target)
+    .attr("role", "img")
+    .attr("aria-label", `${title}. ${description}`);
+
+  // #chart-title is now the visible <h2> above the chart and is authored in the
+  // markup, so it is deliberately left alone — only the hidden data summary is
+  // generated here. Writing to it would blank out the chart's own title.
+  d3.select("#chart-description").text(description);
+}
+
+/* The SVG is authored in viewBox units and then scaled down into its own grid
+   column, so a font-size written here lands on screen at size ÷ scale. Left
+   uncorrected, an 18-unit axis label renders at about 12px next to 18px prose,
+   and the chart reads as a third-party embed rather than part of the page.
+
+   These convert the page's --fs-* tokens into viewBox units. The divisors are
+   the column's width at the design viewport: 672px for the 1.6fr track of the
+   1180px content rail, ~340px once the grid has collapsed to one column. */
+
+const WIDE_SCALE    = 980 / 672;
+const COMPACT_SCALE = 360 / 340;
+
+function labelUnits(px, compact) {
+  return Math.round(px * (compact ? COMPACT_SCALE : WIDE_SCALE));
+}
+
+function getChartDimensions() {
+  const compact = isCompact();
+
+  // With the title, subtitle and notes in the prose column, the only things
+  // left outside the plot are the legend above and the month and year rows
+  // below. The margins reserve exactly that and nothing more.
+  return {
+    width:      compact ? 360 : 980,
+    height:     compact ? 380 : 520,
+    // left only has to clear a two-digit tick plus its padding, so it is
+    // sized to that rather than left at a round number — the plot then starts
+    // close to the chart title, which sits on the page's spine.
+    margin:     compact
+      ? { top: 58, right: 10, bottom: 58, left: 30 }
+      : { top: 80, right: 36, bottom: 72, left: 46 },
+
+    // x = 0 puts the legend's left edge on the figure's left edge, which is
+    // the chart title's edge, which is the page's spine.
+    legendX:    0,
+    legendY:    compact ? 34 : 46,
+
+    /* --fs-small (14px) for anything you look up, one step down for the
+       values packed inside and above the bars. */
+    axisSize:   labelUnits(14, compact),
+    legendSize: labelUnits(14, compact),
+    noteSize:   labelUnits(14, compact),
+    valueSize:  labelUnits(13, compact),
+    yearSize:   labelUnits(12, compact),
+    segSize:    labelUnits(12, compact),
+
+    monthDy:    compact ? 22 : 30,
+    yearDy:     compact ? 44 : 58,
+    barPadding: compact ? 0.28 : 0.34,
+    gap:        compact ? 1.5 : 2
+  };
+}
+
+function clearChart(target, callback) {
+  const svg = d3.select(target);
+
+  // Cancel every delayed or active transition before removing the old chart,
+  // so a redraw mid-animation can never leave orphaned elements behind.
+  svg.selectAll("*").interrupt();
+  svg.interrupt();
+  svg.selectAll("*").remove();
+
+  requestAnimationFrame(() => {
+    if (typeof callback === "function") callback();
+  });
+}
+
+/* ─────────────────────────────────────────────
+   Reusable chart elements
+───────────────────────────────────────────── */
+
+function drawLegend(container, x, y, compact, fontSize) {
+  const swatch = compact ? 10 : 14;
+  const gap = compact ? 6 : 9;
+
+  const items = container.selectAll(".legend-item")
+    .data(SERIES)
+    .join("g")
+    .attr("class", "legend-item");
+
+  let offset = 0;
+
+  items.each(function(d) {
+    const item = d3.select(this)
+      .attr("transform", `translate(${x + offset},${y})`);
+
+    item.append("rect")
+      .attr("x", 0)
+      .attr("y", -swatch + (compact ? 1 : 2))
+      .attr("width", swatch)
+      .attr("height", swatch)
+      .attr("rx", 2)
+      .attr("ry", 2)
+      .attr("fill", d.color);
+
+    const label = item.append("text")
+      .attr("x", swatch + gap)
+      .attr("y", 0)
+      .attr("font-family", FONT_LABEL)
+      .attr("font-size", fontSize)
+      .attr("fill", INK)
+      .text(d.label);
+
+    offset += swatch + gap + label.node().getComputedTextLength() + (compact ? 16 : 28);
+  });
+}
+
+/* ─────────────────────────────────────────────
+   Stacked column chart
+───────────────────────────────────────────── */
+
+function drawStacked(target = "#chart", animate = true) {
+  const compact = isCompact();
+
+  const {
+    width, height, margin,
+    legendX, legendY, axisSize, valueSize, legendSize,
+    noteSize, yearSize, segSize,
+    monthDy, yearDy, barPadding, gap
+  } = getChartDimensions();
+
+  const totalDeliveries = d3.sum(orderData, d => d.total);
+  const totalDouble = d3.sum(orderData, d => d.double);
+  const peak = orderData.reduce((a, b) => (b.double > a.double ? b : a));
+
+  updateChartAccessibility(
+    target,
+    "Monthly delivery orders, split between solo orders and Double Dash",
+    `${totalDouble} of ${totalDeliveries} deliveries between July 2025 and July 2026 were Double Dash, ` +
+    `peaking at ${peak.double} out of ${peak.total} orders in ${peak.full}.`
+  );
+
+  const svg = d3.select(target)
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  const chartGroup = svg.append("g")
+    .attr("class", "stacked-chart")
+    .style("opacity", 0);
+
+  chartGroup.transition()
+    .duration(animate ? 500 : 0)
+    .style("opacity", 1);
+
+  /* Scales */
+
+  const x = d3.scaleBand()
+    .domain(orderData.map(d => d.full))
+    .range([margin.left, width - margin.right])
+    .padding(barPadding);
+
+  const y = d3.scaleLinear()
+    .domain([0, Y_MAX])
+    .range([height - margin.bottom, margin.top]);
+
+  /* Legend */
+
+  drawLegend(chartGroup, legendX, legendY, compact, legendSize);
+
+  /* Y axis: value labels only. tickSize(0) removes the gridlines that used to
+     run behind the bars; the labels do not move, because d3 positions them at
+     Math.max(tickSizeInner, 0) + tickPadding, which was already tickPadding
+     when tickSize was negative. */
+
+  chartGroup.append("g")
+    .attr("class", "y-axis")
+    .attr("transform", `translate(${margin.left},0)`)
+    .call(
+      d3.axisLeft(y)
+        .tickValues(Y_TICKS)
+        .tickSize(0)
+        .tickPadding(compact ? 7 : 10)
+        .tickFormat(d => d)
+    )
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll("text")
+      .attr("font-family", FONT_LABEL)
+      .attr("font-size", axisSize)
+      .attr("fill", INK_MUTED)
+    );
+
+  // Baseline and y spine drawn by hand, so the axis never caps the top. They
+  // wear --dim, the map's "pushed back but still there" color.
+  chartGroup.append("line")
+    .attr("x1", margin.left)
+    .attr("x2", width - margin.right)
+    .attr("y1", y(0))
+    .attr("y2", y(0))
+    .attr("stroke", DIM)
+    .attr("stroke-width", 1.2);
+
+  chartGroup.append("line")
+    .attr("x1", margin.left)
+    .attr("x2", margin.left)
+    .attr("y1", y(Y_MAX) - 16)
+    .attr("y2", y(0))
+    .attr("stroke", DIM)
+    .attr("stroke-width", 1.2);
+
+  /* Peak halo — the map never marks a highlighted dot with color alone; it
+     puts a soft ring around it. This is the same move in bar-chart form: a
+     wash of --accent-tint behind the peak column, drawn before the bars so it
+     sits underneath them.
+
+     It deliberately runs past the plot on both ends — above the tallest bar
+     and down through the month label. A band that stopped at the baseline
+     would be the same shape as a bar, in a chart where pale pink is already a
+     series color; one that runs the full height of the column cannot be read
+     as data. */
+
+  chartGroup.append("rect")
+    .attr("class", "peak-halo")
+    .attr("x", x(peak.full) - x.bandwidth() * 0.2)
+    .attr("width", x.bandwidth() * 1.4)
+    .attr("y", y(Y_MAX) - (compact ? 8 : 14))
+    .attr("height", y(0) - y(Y_MAX) + monthDy + (compact ? 16 : 22))
+    .attr("rx", 3)
+    .attr("fill", ACCENT_TINT);
+
+  /* X axis: month row, then a year row underneath */
+
+  chartGroup.selectAll(".month-label")
+    .data(orderData)
+    .join("text")
+    .attr("class", "month-label")
+    .attr("x", d => x(d.full) + x.bandwidth() / 2)
+    .attr("y", y(0) + monthDy)
+    .attr("text-anchor", "middle")
+    .attr("font-family", FONT_LABEL)
+    .attr("font-size", axisSize)
+    .attr("fill", INK)
+    .text(d => compact ? d.short.charAt(0) : d.short);
+
+  const years = d3.groups(orderData, d => d.year);
+
+  // Each year label sits directly under the first month of its run — 2025 under
+  // the opening Jul, 2026 under Jan — rather than centred across the whole run.
+  chartGroup.selectAll(".year-label")
+    .data(years)
+    .join("text")
+    .attr("class", "year-label")
+    .attr("x", ([, rows]) => x(rows[0].full) + x.bandwidth() / 2)
+    .attr("y", y(0) + yearDy)
+    .attr("text-anchor", "middle")
+    .attr("font-family", FONT_LABEL)
+    .attr("font-size", yearSize)
+    .attr("fill", INK_MUTED)
+    .text(([year]) => year);
+
+  /* Segments */
+
+  const segments = [];
+
+  orderData.forEach((d, i) => {
+    segments.push({ ...d, i, key: "solo",   label: "Solo Order",  value: d.solo,   y0: 0,      y1: d.solo });
+    segments.push({ ...d, i, key: "double", label: "Double Dash", value: d.double, y0: d.solo, y1: d.total });
+  });
+
+  // A 2px surface gap separates the two fills. It is taken out of the solo
+  // segment's top edge so the top of the stack still lands on the true total.
+  function segGap(s) {
+    return s.key === "solo" && s.double > 0 ? gap : 0;
+  }
+
+  function segY(s) {
+    return y(s.y1) + segGap(s);
+  }
+
+  function segH(s) {
+    return Math.max(0, y(s.y0) - y(s.y1) - segGap(s));
+  }
+
+  function segColor(s) {
+    return s.key === "double" ? doubleColor : soloColor;
+  }
+
+  SERIES.forEach((series, seriesIndex) => {
+    const bars = chartGroup.selectAll(`.bar-${series.key}`)
+      .data(segments.filter(s => s.key === series.key && s.value > 0))
+      .join("rect")
+      .attr("class", `bar bar-${series.key}`)
+      .attr("x", d => x(d.full))
+      .attr("width", x.bandwidth())
+      .attr("y", d => animate ? y(d.y0) : segY(d))
+      .attr("height", d => animate ? 0 : segH(d))
+      .attr("rx", 2)
+      .attr("ry", 2)
+      .attr("fill", segColor);
+
+    if (animate) {
+      // Solo grows off the baseline first; Double Dash then grows off the top
+      // of its own solo segment, so the stack builds bottom-up.
+      bars.transition()
+        .delay(d => (seriesIndex === 1 ? 0 : 320) + d.i * 55)
+        .duration(900)
+        .ease(d3.easeCubicInOut)
+        .attr("y", segY)
+        .attr("height", segH);
+    }
+  });
+
+  /* Segment values — each part is labelled, so the split is readable straight
+     off the chart and the two numbers visibly add up to the column total.
+     A segment is only labelled when it is tall enough to hold the digits
+     without them touching the edges. */
+
+  const segLabelSize = segSize;
+
+  chartGroup.selectAll(".segment-label")
+    .data(segments.filter(s => s.value > 0 && segH(s) >= segLabelSize * 1.5))
+    .join("text")
+    .attr("class", "segment-label")
+    .attr("x", d => x(d.full) + x.bandwidth() / 2)
+    .attr("y", d => segY(d) + segH(d) / 2)
+    .attr("dy", "0.35em")
+    .attr("text-anchor", "middle")
+    .attr("font-family", FONT_LABEL)
+    .attr("font-size", segLabelSize)
+    .attr("font-weight", "bold")
+    // The map's own habit: dark marks on the pale field, light marks on the
+    // crimson highlight. White clears 6.88:1 on --accent; ink clears 5.34:1
+    // on --series-solo, where white would only manage 3.11:1.
+    .attr("fill", d => d.key === "double" ? SURFACE : INK)
+    .style("opacity", animate ? 0 : 1)
+    .text(d => d.value)
+    .transition()
+    .delay(animate ? 900 : 0)
+    .duration(600)
+    .style("opacity", 1);
+
+  /* Column totals — the peak month is the only one set in bold */
+
+  chartGroup.selectAll(".total-label")
+    .data(orderData)
+    .join("text")
+    .attr("class", "total-label")
+    .attr("x", d => x(d.full) + x.bandwidth() / 2)
+    .attr("y", d => y(d.total) - (compact ? 7 : 10))
+    .attr("text-anchor", "middle")
+    .attr("font-family", FONT_LABEL)
+    .attr("font-size", valueSize)
+    .attr("font-weight", d => d === peak ? "bold" : "normal")
+    .attr("fill", d => d === peak ? doubleColor : INK_MUTED)
+    .style("opacity", animate ? 0 : 1)
+    .text(d => d.total)
+    .transition()
+    .delay(animate ? 900 : 0)
+    .duration(600)
+    .style("opacity", 1);
+
+  /* Peak annotation — there is no room for it in the compact layout */
+
+  if (!compact) {
+    const annotation = chartGroup.append("text")
+      .attr("class", "peak-annotation")
+      .attr("x", x(peak.full) + x.bandwidth() + 18)
+      .attr("y", y(peak.total) + 20)
+      .attr("font-family", FONT_LABEL)
+      .attr("font-size", noteSize)
+      .attr("fill", INK_MUTED)
+      .style("opacity", animate ? 0 : 1);
+
+    annotation.append("tspan")
+      .attr("x", x(peak.full) + x.bandwidth() + 18)
+      .attr("font-weight", "bold")
+      .attr("fill", doubleColor)
+      .text(peak.full);
+
+    annotation.append("tspan")
+      .attr("x", x(peak.full) + x.bandwidth() + 18)
+      .attr("dy", "1.35em")
+      .text(`${peak.double} of ${peak.total} orders were`);
+
+    annotation.append("tspan")
+      .attr("x", x(peak.full) + x.bandwidth() + 18)
+      .attr("dy", "1.35em")
+      .text("Double Dash");
+
+    annotation.transition()
+      .delay(animate ? 1200 : 0)
+      .duration(700)
+      .ease(d3.easeCubicInOut)
+      .style("opacity", 1);
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Initialization
+───────────────────────────────────────────── */
+
+// Reserve the chart's space immediately, but only draw and animate it once it
+// scrolls into view.
+const chartSvg = d3.select("#chart");
+const initialDimensions = getChartDimensions();
+
+chartSvg
+  .attr("viewBox", `0 0 ${initialDimensions.width} ${initialDimensions.height}`)
+  .attr("preserveAspectRatio", "xMidYMid meet");
+
+let hasAnimated = false;
+
+function startChartAnimation() {
+  if (hasAnimated) return;
+
+  hasAnimated = true;
+  clearChart("#chart", () => drawStacked("#chart", !prefersReducedMotion));
+}
+
+const chartNode = document.querySelector("#chart");
+
+if ("IntersectionObserver" in window && chartNode) {
+  const observer = new IntersectionObserver(
+    entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          startChartAnimation();
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    {
+      threshold: 0.35,
+      rootMargin: "0px 0px -10% 0px"
+    }
+  );
+
+  observer.observe(chartNode);
+} else {
+  // Fallback for older browsers.
+  startChartAnimation();
+}
+
+// Redraw without re-animating when the column crosses the compact threshold —
+// which happens both on window resize and when the grid collapses to one column.
+let wasCompact = isCompact();
+let resizeTimer = null;
+
+function handleResize() {
+  window.clearTimeout(resizeTimer);
+
+  resizeTimer = window.setTimeout(() => {
+    const nowCompact = isCompact();
+
+    if (nowCompact === wasCompact) return;
+
+    wasCompact = nowCompact;
+
+    if (!hasAnimated) {
+      const dimensions = getChartDimensions();
+
+      chartSvg.attr(
+        "viewBox",
+        `0 0 ${dimensions.width} ${dimensions.height}`
+      );
+
+      return;
+    }
+
+    clearChart("#chart", () => drawStacked("#chart", false));
+  }, 180);
+}
+
+if ("ResizeObserver" in window && figureNode) {
+  new ResizeObserver(handleResize).observe(figureNode);
+} else {
+  window.addEventListener("resize", handleResize);
+}
+
+})();
+</script>
+
+<!-- mobile phone warning modal -->
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const isSmallScreen = window.innerWidth <= 900;
+
+    if (isSmallScreen) {
+      document.getElementById("deviceModal").style.display = "flex";
+    }
+
+    document
+      .getElementById("continueBtn")
+      .addEventListener("click", function () {
+        document.getElementById("deviceModal").style.display = "none";
+      });
+  });
+</script>
+
+  </body>
+</html>

@@ -1,0 +1,829 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Double Dash Deliveries — Stacked Column Chart</title>
+
+<style>
+/* ═══════════════════════════════════════════════════════════
+   DESIGN TOKENS — kept identical to index.html's :root block,
+   which is where they are documented. Both files derive their
+   color from the same source: pixels sampled out of the map in
+   images/anno1.png and images/anno3.png. See STYLE-SYSTEM.md.
+
+   If you change a value here, change it there too — or better,
+   change it there and copy the block down.
+   ═══════════════════════════════════════════════════════════ */
+
+:root{
+  /* color, sampled from the map */
+  --field:       #edcce1;
+  --field-soft:  #f8eef4;
+  --dim:         #b199a6;
+  --water:       #c5dadf;
+  --accent:      #a8264e;
+  --accent-soft: #f693b3;
+  --accent-tint: #f4dce6;
+  --marker:      #0e9382;
+  --ink:         #231c26;
+  --ink-muted:   #6b6070;
+  --rule:        #e4d6e0;
+  --surface:     #ffffff;
+
+  /* the one categorical pair — validated, see STYLE-SYSTEM.md */
+  --series-solo:   #d4739f;
+  --series-double: var(--accent);
+
+  /* type: serif is what you read, sans is what you look up */
+  --font-serif: Georgia, "Times New Roman", Times, serif;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI",
+    "Helvetica Neue", Helvetica, Arial, sans-serif;
+
+  --fs-h2:    clamp(1.35rem, 2.2vw, 1.75rem);
+  --fs-body:  1.125rem;
+  --fs-small: 0.875rem;
+
+  /* measure and grid */
+  --measure: 34rem;
+  --content: 1180px;
+  --gutter:  1.5rem;
+
+  /* spacing: 8px ladder */
+  --sp-xs:  0.5rem;
+  --sp-sm:  1rem;
+  --sp-md:  1.5rem;
+  --sp-lg:  2.5rem;
+  --sp-xl:  4rem;
+  --sp-2xl: 6rem;
+}
+
+/* ═══════════════════════════════════════════════════════════
+   PAGE CHROME — preview only. Delete this block when you paste
+   the section into another site; the host page supplies its
+   own background and outer layout.
+   ═══════════════════════════════════════════════════════════ */
+
+html,
+body{
+  margin:0;
+  padding:0;
+}
+
+body{
+  font-family:var(--font-serif);
+  font-size:var(--fs-body);
+  line-height:1.65;
+  color:var(--ink);
+  background:var(--surface);
+  min-height:100vh;
+  padding:var(--sp-xl) 0;
+  -webkit-font-smoothing:antialiased;
+}
+
+/* Matches .story-wrap in index.html exactly, so the chart column is the same
+   672px there and here — which is what the label scale in the script below
+   is calibrated against. */
+.wrap{
+  max-width:var(--content);
+  margin:0 auto;
+  padding:0 var(--gutter);
+  box-sizing:border-box;
+}
+
+@media (max-width:600px){
+  body{padding:var(--sp-lg) 0;}
+}
+
+/* ═══════════════════════════════════════════════════════════
+   SECTION — copy from here down. Every rule is scoped to the
+   section's own classes, so nothing leaks into the host page.
+   Chart on the left, prose on the right; the two stack into a
+   single column below 860px.
+   ═══════════════════════════════════════════════════════════ */
+
+.story{
+  display:grid;
+  grid-template-columns:minmax(0,1.6fr) minmax(0,1fr);
+  gap:var(--sp-lg);
+  align-items:center;
+}
+
+.story *{
+  box-sizing:border-box;
+}
+
+/* CHART — sits directly on whatever background is behind it. The SVG paints
+   only its legend, axes and values; the framing text lives in the prose
+   column. Every color it uses is read back out of the tokens above. */
+
+.chart-figure{
+  margin:0;
+  padding:0;
+}
+
+.chart-figure #chart{
+  width:100%;
+  height:auto;
+  display:block;
+}
+
+/* PROSE */
+
+.story-text{
+  max-width:var(--measure);
+}
+
+.story-text h2{
+  font-family:var(--font-serif);
+  font-size:var(--fs-h2);
+  line-height:1.25;
+  font-weight:normal;
+  color:var(--ink);
+  margin:0 0 var(--sp-sm);
+}
+
+.story-text p{
+  font-size:var(--fs-body);
+  line-height:1.65;
+  color:var(--ink);
+  margin:0 0 var(--sp-sm);
+}
+
+.story-text .story-note{
+  margin:var(--sp-md) 0 0;
+  padding-top:var(--sp-sm);
+  border-top:1px solid var(--rule);
+  font-family:var(--font-sans);
+  font-size:var(--fs-small);
+  line-height:1.5;
+  color:var(--ink-muted);
+}
+
+/* PAGE PROSE — the connective text that follows the section. Every rule is
+   scoped to .page-prose rather than to a bare `p`, so it cannot reach into
+   the chart's own prose column or its two .sr-only paragraphs. */
+
+.page-prose{
+  max-width:var(--measure);
+  margin:var(--sp-2xl) 0 0;
+}
+
+.page-prose p{
+  font-family:var(--font-serif);
+  font-size:var(--fs-body);
+  line-height:1.65;
+  color:var(--ink);
+  margin:0 0 var(--sp-md);
+}
+
+.page-prose p:last-child{
+  margin-bottom:0;
+}
+
+.sr-only{
+  position:absolute;
+  width:1px;
+  height:1px;
+  padding:0;
+  margin:-1px;
+  overflow:hidden;
+  clip:rect(0, 0, 0, 0);
+  clip-path:inset(50%);
+  white-space:nowrap;
+  border:0;
+}
+
+@media (max-width:860px){
+  .story{
+    grid-template-columns:1fr;
+    gap:var(--sp-lg);
+  }
+
+  .story-text{
+    max-width:none;
+  }
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <!-- ── SECTION MARKUP — copy this block ─────────────────── -->
+
+  <div class="story">
+
+    <figure class="chart-figure">
+      <svg
+        id="chart"
+        role="img"
+        aria-labelledby="chart-title chart-description"
+      ></svg>
+
+      <p id="chart-title" class="sr-only">
+        Monthly delivery orders, split between solo orders and Double Dash
+      </p>
+      <p id="chart-description" class="sr-only">
+        A stacked column chart of 86 deliveries between July 2025 and July 2026.
+        Double Dash accounted for 19 of them, rising from none in the first two
+        months to a peak of 7 out of 16 orders in March 2026.
+      </p>
+    </figure>
+
+    <div class="story-text">
+      <h2>
+        Double Dash grew from a rare add-on to nearly half of
+        March&rsquo;s orders
+      </h2>
+
+      <p>
+        Double Dash accounted for <b>19 of 86 deliveries</b> between July 2025
+        and July 2026 &mdash; 22% of the total. It barely registered at first:
+        none at all in the opening two months, and never more than one a month
+        through the end of 2025. That changed in the new year, and the habit
+        peaked in <b>March 2026</b>, when 7 of that month&rsquo;s 16 orders
+        were Double Dash.
+      </p>
+
+      <p class="story-note">
+        Note: one segment counts one delivery &mdash; a Double Dash pairs two
+        stores into a single drop-off, so it is counted once, not twice.
+        Source: DoorDash order receipts, July 2025 &ndash; July 2026.
+      </p>
+    </div>
+
+  </div>
+
+  <!-- ── END OF SECTION ───────────────────────────────────── -->
+
+  <div class="page-prose">
+    <p>
+      Then maybe I have a block of text talking about something or another and
+      then I want to direct you to another map, or a different zoom level, or
+      an image that I want to annotate &mdash; whatever. I can create another
+      photoDiv below. In fact, I can add as many as I want.
+    </p>
+
+    <p>
+      This concept works best if you have a simple base map with a story that
+      progresses with prose on the left and changing annotations on that base
+      map on the right. and it requires that when you export images from Adobe
+      Illustrator you ALWAYS USE THE ARTBOARD when saving and keep all save
+      settings the same (size, image type, etc).
+    </p>
+  </div>
+
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+
+<script>
+/* Everything is wrapped in an IIFE so no names land on the host
+   page's global scope. */
+(function () {
+"use strict";
+
+/* ─────────────────────────────────────────────
+   Data
+───────────────────────────────────────────── */
+
+const orderData = [
+  { short: "Jul", year: "2025", full: "July 2025",      solo:  2, double: 0 },
+  { short: "Aug", year: "2025", full: "August 2025",    solo:  2, double: 0 },
+  { short: "Sep", year: "2025", full: "September 2025", solo:  6, double: 1 },
+  { short: "Oct", year: "2025", full: "October 2025",   solo: 12, double: 1 },
+  { short: "Nov", year: "2025", full: "November 2025",  solo:  5, double: 1 },
+  { short: "Dec", year: "2025", full: "December 2025",  solo:  3, double: 0 },
+  { short: "Jan", year: "2026", full: "January 2026",   solo:  2, double: 2 },
+  { short: "Feb", year: "2026", full: "February 2026",  solo:  4, double: 2 },
+  { short: "Mar", year: "2026", full: "March 2026",     solo:  9, double: 7 },
+  { short: "Apr", year: "2026", full: "April 2026",     solo:  5, double: 0 },
+  { short: "May", year: "2026", full: "May 2026",       solo:  9, double: 2 },
+  { short: "Jun", year: "2026", full: "June 2026",      solo:  4, double: 3 },
+  { short: "Jul", year: "2026", full: "July 2026",      solo:  4, double: 0 }
+];
+
+orderData.forEach(d => {
+  d.total = d.solo + d.double;
+});
+
+/* ─────────────────────────────────────────────
+   Settings and state
+───────────────────────────────────────────── */
+
+/* Every color and the label font are read back out of the design tokens in
+   :root, so this chart cannot drift from the page it is pasted into. */
+
+function token(name) {
+  return getComputedStyle(document.documentElement)
+    .getPropertyValue(name).trim();
+}
+
+const soloColor   = token("--series-solo");
+const doubleColor = token("--series-double");
+
+// The map sets its street and place names in a humanist sans, so every piece
+// of look-it-up text here does the same. Prose stays serif.
+const FONT_LABEL  = token("--font-sans");
+const INK         = token("--ink");
+const INK_MUTED   = token("--ink-muted");
+const DIM         = token("--dim");
+const SURFACE     = token("--surface");
+const ACCENT_TINT = token("--accent-tint");
+
+const SERIES = [
+  { key: "double", label: "Double Dash", color: doubleColor },
+  { key: "solo",   label: "Solo order",  color: soloColor }
+];
+
+const Y_MAX = 16;
+const Y_TICKS = [0, 4, 8, 12, 16];
+
+const prefersReducedMotion =
+  window.matchMedia &&
+  window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+/* ─────────────────────────────────────────────
+   Helpers
+───────────────────────────────────────────── */
+
+const figureNode = document.querySelector(".chart-figure");
+
+// The chart now shares a row with the prose, so it is only as wide as its own
+// column — not as wide as the window. Sizing off the container keeps the
+// rendered type legible in both the two-column and the stacked layout, which
+// a window-width breakpoint could not do.
+function isCompact() {
+  const width = figureNode ? figureNode.clientWidth : 0;
+
+  return (width || window.innerWidth) <= 520;
+}
+
+function updateChartAccessibility(target, title, description) {
+  d3.select(target)
+    .attr("role", "img")
+    .attr("aria-label", `${title}. ${description}`);
+
+  d3.select("#chart-title").text(title);
+  d3.select("#chart-description").text(description);
+}
+
+/* The SVG is authored in viewBox units and then scaled down into its own grid
+   column, so a font-size written here lands on screen at size ÷ scale. Left
+   uncorrected, an 18-unit axis label renders at about 12px next to 18px prose,
+   and the chart reads as a third-party embed rather than part of the page.
+
+   These convert the page's --fs-* tokens into viewBox units. The divisors are
+   the column's width at the design viewport: 672px for the 1.6fr track of the
+   1180px content rail, ~340px once the grid has collapsed to one column. */
+
+const WIDE_SCALE    = 980 / 672;
+const COMPACT_SCALE = 360 / 340;
+
+function labelUnits(px, compact) {
+  return Math.round(px * (compact ? COMPACT_SCALE : WIDE_SCALE));
+}
+
+function getChartDimensions() {
+  const compact = isCompact();
+
+  // With the title, subtitle and notes moved into the prose column, the only
+  // things left outside the plot are the legend above and the month and year
+  // rows below. The margins reserve exactly that and nothing more.
+  return {
+    width:      compact ? 360 : 980,
+    height:     compact ? 380 : 520,
+    // left only has to clear a two-digit tick plus its padding, so it is
+    // sized to that rather than left at a round number.
+    margin:     compact
+      ? { top: 58, right: 10, bottom: 58, left: 30 }
+      : { top: 80, right: 36, bottom: 72, left: 46 },
+
+    // x = 0 puts the legend's left edge on the figure's left edge.
+    legendX:    0,
+    legendY:    compact ? 34 : 46,
+
+    /* --fs-small (14px) for anything you look up, one step down for the
+       values packed inside and above the bars. */
+    axisSize:   labelUnits(14, compact),
+    legendSize: labelUnits(14, compact),
+    noteSize:   labelUnits(14, compact),
+    valueSize:  labelUnits(13, compact),
+    yearSize:   labelUnits(12, compact),
+    segSize:    labelUnits(12, compact),
+
+    monthDy:    compact ? 22 : 30,
+    yearDy:     compact ? 44 : 58,
+    barPadding: compact ? 0.28 : 0.34,
+    gap:        compact ? 1.5 : 2
+  };
+}
+
+function clearChart(target, callback) {
+  const svg = d3.select(target);
+
+  // Cancel every delayed or active transition before removing the old chart,
+  // so a redraw mid-animation can never leave orphaned elements behind.
+  svg.selectAll("*").interrupt();
+  svg.interrupt();
+  svg.selectAll("*").remove();
+
+  requestAnimationFrame(() => {
+    if (typeof callback === "function") callback();
+  });
+}
+
+/* ─────────────────────────────────────────────
+   Reusable chart elements
+───────────────────────────────────────────── */
+
+function drawLegend(container, x, y, compact, fontSize) {
+  const swatch = compact ? 10 : 14;
+  const gap = compact ? 6 : 9;
+
+  const items = container.selectAll(".legend-item")
+    .data(SERIES)
+    .join("g")
+    .attr("class", "legend-item");
+
+  let offset = 0;
+
+  items.each(function(d) {
+    const item = d3.select(this)
+      .attr("transform", `translate(${x + offset},${y})`);
+
+    item.append("rect")
+      .attr("x", 0)
+      .attr("y", -swatch + (compact ? 1 : 2))
+      .attr("width", swatch)
+      .attr("height", swatch)
+      .attr("rx", 2)
+      .attr("ry", 2)
+      .attr("fill", d.color);
+
+    const label = item.append("text")
+      .attr("x", swatch + gap)
+      .attr("y", 0)
+      .attr("font-family", FONT_LABEL)
+      .attr("font-size", fontSize)
+      .attr("fill", INK)
+      .text(d.label);
+
+    offset += swatch + gap + label.node().getComputedTextLength() + (compact ? 16 : 28);
+  });
+}
+
+/* ─────────────────────────────────────────────
+   Stacked column chart
+───────────────────────────────────────────── */
+
+function drawStacked(target = "#chart", animate = true) {
+  const compact = isCompact();
+
+  const {
+    width, height, margin,
+    legendX, legendY, axisSize, valueSize, legendSize,
+    noteSize, yearSize, segSize,
+    monthDy, yearDy, barPadding, gap
+  } = getChartDimensions();
+
+  const totalDeliveries = d3.sum(orderData, d => d.total);
+  const totalDouble = d3.sum(orderData, d => d.double);
+  const peak = orderData.reduce((a, b) => (b.double > a.double ? b : a));
+
+  updateChartAccessibility(
+    target,
+    "Monthly delivery orders, split between solo orders and Double Dash",
+    `${totalDouble} of ${totalDeliveries} deliveries between July 2025 and July 2026 were Double Dash, ` +
+    `peaking at ${peak.double} out of ${peak.total} orders in ${peak.full}.`
+  );
+
+  const svg = d3.select(target)
+    .attr("viewBox", `0 0 ${width} ${height}`)
+    .attr("preserveAspectRatio", "xMidYMid meet");
+
+  const chartGroup = svg.append("g")
+    .attr("class", "stacked-chart")
+    .style("opacity", 0);
+
+  chartGroup.transition()
+    .duration(animate ? 500 : 0)
+    .style("opacity", 1);
+
+  /* Scales */
+
+  const x = d3.scaleBand()
+    .domain(orderData.map(d => d.full))
+    .range([margin.left, width - margin.right])
+    .padding(barPadding);
+
+  const y = d3.scaleLinear()
+    .domain([0, Y_MAX])
+    .range([height - margin.bottom, margin.top]);
+
+  /* Legend */
+
+  drawLegend(chartGroup, legendX, legendY, compact, legendSize);
+
+  /* Y axis: value labels only. */
+
+  chartGroup.append("g")
+    .attr("class", "y-axis")
+    .attr("transform", `translate(${margin.left},0)`)
+    .call(
+      d3.axisLeft(y)
+        .tickValues(Y_TICKS)
+        .tickSize(0)
+        .tickPadding(compact ? 7 : 10)
+        .tickFormat(d => d)
+    )
+    .call(g => g.select(".domain").remove())
+    .call(g => g.selectAll("text")
+      .attr("font-family", FONT_LABEL)
+      .attr("font-size", axisSize)
+      .attr("fill", INK_MUTED)
+    );
+
+  // Baseline and y spine drawn by hand, so the axis never caps the top.
+  chartGroup.append("line")
+    .attr("x1", margin.left)
+    .attr("x2", width - margin.right)
+    .attr("y1", y(0))
+    .attr("y2", y(0))
+    .attr("stroke", DIM)
+    .attr("stroke-width", 1.2);
+
+  chartGroup.append("line")
+    .attr("x1", margin.left)
+    .attr("x2", margin.left)
+    .attr("y1", y(Y_MAX) - 16)
+    .attr("y2", y(0))
+    .attr("stroke", DIM)
+    .attr("stroke-width", 1.2);
+
+  /* Peak halo — the map never marks a highlighted dot with color alone; it
+     puts a soft ring around it. This is the same move in bar-chart form. It
+     runs past the plot on both ends so it cannot be read as a bar. */
+
+  chartGroup.append("rect")
+    .attr("class", "peak-halo")
+    .attr("x", x(peak.full) - x.bandwidth() * 0.2)
+    .attr("width", x.bandwidth() * 1.4)
+    .attr("y", y(Y_MAX) - (compact ? 8 : 14))
+    .attr("height", y(0) - y(Y_MAX) + monthDy + (compact ? 16 : 22))
+    .attr("rx", 3)
+    .attr("fill", ACCENT_TINT);
+
+  /* X axis: month row, then a year row underneath */
+
+  chartGroup.selectAll(".month-label")
+    .data(orderData)
+    .join("text")
+    .attr("class", "month-label")
+    .attr("x", d => x(d.full) + x.bandwidth() / 2)
+    .attr("y", y(0) + monthDy)
+    .attr("text-anchor", "middle")
+    .attr("font-family", FONT_LABEL)
+    .attr("font-size", axisSize)
+    .attr("fill", INK)
+    .text(d => compact ? d.short.charAt(0) : d.short);
+
+  const years = d3.groups(orderData, d => d.year);
+
+  // Each year label sits directly under the first month of its run — 2025 under
+  // the opening Jul, 2026 under Jan — rather than centred across the whole run.
+  chartGroup.selectAll(".year-label")
+    .data(years)
+    .join("text")
+    .attr("class", "year-label")
+    .attr("x", ([, rows]) => x(rows[0].full) + x.bandwidth() / 2)
+    .attr("y", y(0) + yearDy)
+    .attr("text-anchor", "middle")
+    .attr("font-family", FONT_LABEL)
+    .attr("font-size", yearSize)
+    .attr("fill", INK_MUTED)
+    .text(([year]) => year);
+
+  /* Segments */
+
+  const segments = [];
+
+  orderData.forEach((d, i) => {
+    segments.push({ ...d, i, key: "solo",   label: "Solo order",  value: d.solo,   y0: 0,      y1: d.solo });
+    segments.push({ ...d, i, key: "double", label: "Double Dash", value: d.double, y0: d.solo, y1: d.total });
+  });
+
+  // A 2px surface gap separates the two fills. It is taken out of the solo
+  // segment's top edge so the top of the stack still lands on the true total.
+  function segGap(s) {
+    return s.key === "solo" && s.double > 0 ? gap : 0;
+  }
+
+  function segY(s) {
+    return y(s.y1) + segGap(s);
+  }
+
+  function segH(s) {
+    return Math.max(0, y(s.y0) - y(s.y1) - segGap(s));
+  }
+
+  function segColor(s) {
+    return s.key === "double" ? doubleColor : soloColor;
+  }
+
+  SERIES.forEach((series, seriesIndex) => {
+    const bars = chartGroup.selectAll(`.bar-${series.key}`)
+      .data(segments.filter(s => s.key === series.key && s.value > 0))
+      .join("rect")
+      .attr("class", `bar bar-${series.key}`)
+      .attr("x", d => x(d.full))
+      .attr("width", x.bandwidth())
+      .attr("y", d => animate ? y(d.y0) : segY(d))
+      .attr("height", d => animate ? 0 : segH(d))
+      .attr("rx", 2)
+      .attr("ry", 2)
+      .attr("fill", segColor);
+
+    if (animate) {
+      // Solo grows off the baseline first; Double Dash then grows off the top
+      // of its own solo segment, so the stack builds bottom-up.
+      bars.transition()
+        .delay(d => (seriesIndex === 1 ? 0 : 320) + d.i * 55)
+        .duration(900)
+        .ease(d3.easeCubicInOut)
+        .attr("y", segY)
+        .attr("height", segH);
+    }
+  });
+
+  /* Segment values — each part is labelled, so the split is readable straight
+     off the chart and the two numbers visibly add up to the column total.
+     A segment is only labelled when it is tall enough to hold the digits
+     without them touching the edges. */
+
+  const segLabelSize = segSize;
+
+  chartGroup.selectAll(".segment-label")
+    .data(segments.filter(s => s.value > 0 && segH(s) >= segLabelSize * 1.5))
+    .join("text")
+    .attr("class", "segment-label")
+    .attr("x", d => x(d.full) + x.bandwidth() / 2)
+    .attr("y", d => segY(d) + segH(d) / 2)
+    .attr("dy", "0.35em")
+    .attr("text-anchor", "middle")
+    .attr("font-family", FONT_LABEL)
+    .attr("font-size", segLabelSize)
+    .attr("font-weight", "bold")
+    .attr("fill", d => d.key === "double" ? SURFACE : INK)
+    .style("opacity", animate ? 0 : 1)
+    .text(d => d.value)
+    .transition()
+    .delay(animate ? 900 : 0)
+    .duration(600)
+    .style("opacity", 1);
+
+  /* Column totals — the peak month is the only one set in bold */
+
+  chartGroup.selectAll(".total-label")
+    .data(orderData)
+    .join("text")
+    .attr("class", "total-label")
+    .attr("x", d => x(d.full) + x.bandwidth() / 2)
+    .attr("y", d => y(d.total) - (compact ? 7 : 10))
+    .attr("text-anchor", "middle")
+    .attr("font-family", FONT_LABEL)
+    .attr("font-size", valueSize)
+    .attr("font-weight", d => d === peak ? "bold" : "normal")
+    .attr("fill", d => d === peak ? doubleColor : INK_MUTED)
+    .style("opacity", animate ? 0 : 1)
+    .text(d => d.total)
+    .transition()
+    .delay(animate ? 900 : 0)
+    .duration(600)
+    .style("opacity", 1);
+
+  /* Peak annotation — there is no room for it in the compact layout */
+
+  if (!compact) {
+    const annotation = chartGroup.append("text")
+      .attr("class", "peak-annotation")
+      .attr("x", x(peak.full) + x.bandwidth() + 18)
+      .attr("y", y(peak.total) + 20)
+      .attr("font-family", FONT_LABEL)
+      .attr("font-size", noteSize)
+      .attr("fill", INK_MUTED)
+      .style("opacity", animate ? 0 : 1);
+
+    annotation.append("tspan")
+      .attr("x", x(peak.full) + x.bandwidth() + 18)
+      .attr("font-weight", "bold")
+      .attr("fill", doubleColor)
+      .text(peak.full);
+
+    annotation.append("tspan")
+      .attr("x", x(peak.full) + x.bandwidth() + 18)
+      .attr("dy", "1.35em")
+      .text(`${peak.double} of ${peak.total} orders were`);
+
+    annotation.append("tspan")
+      .attr("x", x(peak.full) + x.bandwidth() + 18)
+      .attr("dy", "1.35em")
+      .text("Double Dash");
+
+    annotation.transition()
+      .delay(animate ? 1200 : 0)
+      .duration(700)
+      .ease(d3.easeCubicInOut)
+      .style("opacity", 1);
+  }
+}
+
+/* ─────────────────────────────────────────────
+   Initialization
+───────────────────────────────────────────── */
+
+// Reserve the chart's space immediately, but only draw and animate it once it
+// scrolls into view.
+const chartSvg = d3.select("#chart");
+const initialDimensions = getChartDimensions();
+
+chartSvg
+  .attr("viewBox", `0 0 ${initialDimensions.width} ${initialDimensions.height}`)
+  .attr("preserveAspectRatio", "xMidYMid meet");
+
+let hasAnimated = false;
+
+function startChartAnimation() {
+  if (hasAnimated) return;
+
+  hasAnimated = true;
+  clearChart("#chart", () => drawStacked("#chart", !prefersReducedMotion));
+}
+
+const chartNode = document.querySelector("#chart");
+
+if ("IntersectionObserver" in window && chartNode) {
+  const observer = new IntersectionObserver(
+    entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          startChartAnimation();
+          observer.unobserve(entry.target);
+        }
+      });
+    },
+    {
+      threshold: 0.35,
+      rootMargin: "0px 0px -10% 0px"
+    }
+  );
+
+  observer.observe(chartNode);
+} else {
+  // Fallback for older browsers.
+  startChartAnimation();
+}
+
+// Redraw without re-animating when the column crosses the compact threshold —
+// which happens both on window resize and when the grid collapses to one column.
+let wasCompact = isCompact();
+let resizeTimer = null;
+
+function handleResize() {
+  window.clearTimeout(resizeTimer);
+
+  resizeTimer = window.setTimeout(() => {
+    const nowCompact = isCompact();
+
+    if (nowCompact === wasCompact) return;
+
+    wasCompact = nowCompact;
+
+    if (!hasAnimated) {
+      const dimensions = getChartDimensions();
+
+      chartSvg.attr(
+        "viewBox",
+        `0 0 ${dimensions.width} ${dimensions.height}`
+      );
+
+      return;
+    }
+
+    clearChart("#chart", () => drawStacked("#chart", false));
+  }, 180);
+}
+
+if ("ResizeObserver" in window && figureNode) {
+  new ResizeObserver(handleResize).observe(figureNode);
+} else {
+  window.addEventListener("resize", handleResize);
+}
+
+})();
+</script>
+
+</body>
+</html>
