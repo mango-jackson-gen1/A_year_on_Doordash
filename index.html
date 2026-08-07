@@ -219,16 +219,46 @@
          viewport is narrower than the hero, so without the cap the images
          would run into both screen edges. */
       .hero {
-        --hero-scale: 0.7;
+        --hero-scale: 0.84;
 
-        max-width: min(
+        /* The rail, the gap and the column are named rather than inlined
+           because the croissant's drop below is a share of that image's
+           rendered HEIGHT, and .hero has to reserve the same distance at its
+           own bottom — a transform does not grow the row it sits in, so
+           without the reserve the croissant hangs into the section under it.
+           Running both off one chain keeps offset and reserve equal at every
+           viewport width instead of leaving a magic number to drift. */
+        --hero-rail: min(
           calc((var(--content) - 2 * var(--gutter)) * var(--hero-scale)),
           calc(100% - 2 * var(--gutter))
         );
+        --hero-gap: calc(var(--sp-lg) * var(--hero-scale));
+        --hero-col: calc((var(--hero-rail) - var(--hero-gap)) / 2);
+        /* 838/965 is the croissant export's own aspect ratio, so this is 50%
+           of the height that image actually renders at, not 50% of anything
+           the layout happens to measure. Keep it in step with the width/height
+           attributes on that <img> if the file is ever re-exported, and with
+           the translateY percentage on .hero__item--drop, which has to be the
+           same number for the reserved space below to come out right. */
+        --hero-drop: calc(var(--hero-col) * 838 / 965 * 0.5);
+        /* Both cut-outs sit 10% of that same height clear of the headline, so
+           the pair reads as its own object rather than as something hung off
+           the bottom of the type. Same reference as --hero-drop, so the two
+           offsets stay in proportion to each other at every width. */
+        --hero-nudge: calc(var(--hero-col) * 838 / 965 * 0.1);
+
+        max-width: var(--hero-rail);
         margin: 0 auto var(--sp-xl);
+        /* PADDING, not margin-top: h1 already carries margin-bottom:--sp-lg,
+           and adjacent block siblings COLLAPSE to the larger of the two rather
+           than summing. A margin-top here would be largely eaten by that 40px
+           and the images would barely move. Padding does not collapse, so this
+           lands on top of the existing gap in full. */
+        padding-top: var(--hero-nudge);
+        padding-bottom: var(--hero-drop);
         display: grid;
         grid-template-columns: 1fr 1fr;
-        gap: calc(var(--sp-lg) * var(--hero-scale));
+        gap: var(--hero-gap);
         /* The two cut-outs are different shapes and different heights. Baseline
            or stretch would either float one of them or distort it; centring
            lets them hang off a shared middle, which is how a pair of loose
@@ -237,19 +267,46 @@
       }
 
       .hero__item {
-        /* The columns are ~546px at the design viewport and the smaller export
-           is 597px wide, so both are scaled DOWN — neither is ever enlarged
-           past its pixels. */
+        /* The columns are ~459px at the design viewport and the smaller export
+           is 597px wide, so both are still scaled DOWN — even at --hero-scale
+           0.84 neither is ever enlarged past its pixels. 597px is the ceiling
+           on the scale: past it the wonton starts being upsampled. */
         width: 100%;
         height: auto;
         display: block;
       }
 
+      /* The croissant hangs 50% of its own height below the wonton. The pair is
+         deliberately NOT level — two cut-outs hung off one centre line read as
+         a spec sheet, and one dropped against the other reads as two objects
+         set down on a surface.
+
+         transform rather than a margin: a percentage margin resolves against
+         the container's WIDTH, and this has to be a share of the image's own
+         height for the offset to hold its proportion as the pair scales.
+
+         Keyed to a class rather than :nth-child so that the swap the note above
+         the markup describes carries the drop along with the croissant. */
+      .hero__item--drop {
+        transform: translateY(50%);
+      }
+
       @media only screen and (max-width: 600px) {
         .hero {
+          /* Stacked, there is no second image to be uneven against: the drop
+             would read as a stray gap and overhang the section below. */
+          --hero-drop: 0px;
+          /* One column, so an image now spans the WHOLE rail rather than half
+             of it. --hero-col has to follow or --hero-nudge keeps sizing
+             itself off a two-column width that no longer exists here. */
+          --hero-col: var(--hero-rail);
           grid-template-columns: 1fr;
           gap: var(--sp-md);
           margin-bottom: var(--sp-lg);
+        }
+
+        .hero__item--drop {
+          transform: none;
         }
       }
 
@@ -764,11 +821,11 @@
       height="511"
     >
     <img
-      class="hero__item"
+      class="hero__item hero__item--drop"
       src="images/food/croissant.png"
       alt="A croissant, tagged like a receipt line: 24 ordered, $96 spent."
       width="965"
-      height="931"
+      height="838"
     >
   </figure>
 
@@ -831,7 +888,7 @@
 
         <div class="scrolly-overlay">
           <div class="step" id="step1">
-            <p>Some of my most visited restaurants are, well shamefully, within walking distance of my house.</p>
+            <p>Some of my most-visited restaurants are, well, shamefully within walking distance of my house. And although these are places I know well, I&rsquo;ve actually set foot in no more than a handful of them over the past year.</p>
           </div>
           <div class="step" id="step2">
             <p>Some of the places I&rsquo;ve ordered from most frequently are Dim Sum Sam, a Cantonese restaurant, about 17 times, and Din Tai Fung, a Taiwanese-Shanghainese restaurant, 8 times.</p>
