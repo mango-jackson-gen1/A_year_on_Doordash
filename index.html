@@ -198,7 +198,7 @@
       }
 
       /* ===================================================================
-         HERO — the two food cut-outs under the headline
+         HERO — the two food cut-outs that close the page
          =================================================================== */
 
       /* Centred on the page rather than run out from the left spine. Once
@@ -225,7 +225,7 @@
            because the croissant's drop below is a share of that image's
            rendered HEIGHT, and .hero has to reserve the same distance at its
            own bottom — a transform does not grow the row it sits in, so
-           without the reserve the croissant hangs into the section under it.
+           without the reserve the croissant hangs off the end of the page.
            Running both off one chain keeps offset and reserve equal at every
            viewport width instead of leaving a magic number to drift. */
         --hero-rail: min(
@@ -241,19 +241,20 @@
            the translateY percentage on .hero__item--drop, which has to be the
            same number for the reserved space below to come out right. */
         --hero-drop: calc(var(--hero-col) * 838 / 965 * 0.5);
-        /* Both cut-outs sit 10% of that same height clear of the headline, so
-           the pair reads as its own object rather than as something hung off
-           the bottom of the type. Same reference as --hero-drop, so the two
-           offsets stay in proportion to each other at every width. */
+        /* Both cut-outs sit 10% of that same height clear of whatever block
+           precedes them, so the pair reads as its own object rather than as
+           something hung off the bottom of the section above. Same reference
+           as --hero-drop, so the two offsets stay in proportion to each other
+           at every width. */
         --hero-nudge: calc(var(--hero-col) * 838 / 965 * 0.1);
 
         max-width: var(--hero-rail);
         margin: 0 auto var(--sp-xl);
-        /* PADDING, not margin-top: h1 already carries margin-bottom:--sp-lg,
-           and adjacent block siblings COLLAPSE to the larger of the two rather
-           than summing. A margin-top here would be largely eaten by that 40px
-           and the images would barely move. Padding does not collapse, so this
-           lands on top of the existing gap in full. */
+        /* PADDING, not margin-top: the preceding block carries its own bottom
+           margin, and adjacent block siblings COLLAPSE to the larger of the two
+           rather than summing. A margin-top here would be largely eaten by that
+           gap and the images would barely move. Padding does not collapse, so
+           this lands on top of the existing gap in full. */
         padding-top: var(--hero-nudge);
         padding-bottom: var(--hero-drop);
         display: grid;
@@ -796,39 +797,6 @@
   <body>
 	<h1>A Year on DoorDash</h1>
 
-  <!-- ========== HERO ==========
-       Two of the year's line items, standing in for the whole receipt. Both
-       are cut-outs on transparent backgrounds, so they sit straight on the
-       page's white surface with no frame or card around them — the pink tag
-       burned into each export is the only chrome they need, and it is already
-       the page's accent.
-
-       Decorative rather than evidential: the numbers on the tags are in the
-       alt text, and the chart below is where the year is actually counted.
-       ================================================================== -->
-  <!-- Wontons first, croissant second — NOT alphabetical or arbitrary. The
-       pink tag is baked into the top-LEFT of the wonton export and the
-       top-RIGHT of the croissant one, so in this order the two tags bookend
-       the pair at the outer corners and the food meets in the middle. Reverse
-       them and both tags collide in the centre while the food is pushed out
-       to the page edges. Swapping these two <img> tags is all it takes. -->
-  <figure class="hero">
-    <img
-      class="hero__item"
-      src="images/food/wonton.png"
-      alt="A bowl of shrimp and pork wontons, tagged like a receipt line: 17 bowls ordered, $167.28 spent."
-      width="597"
-      height="511"
-    >
-    <img
-      class="hero__item hero__item--drop"
-      src="images/food/croissant.png"
-      alt="A croissant, tagged like a receipt line: 24 ordered, $96 spent."
-      width="965"
-      height="838"
-    >
-  </figure>
-
   <!-- ========== One year of delivery spending (scroll-scrubbed) ==========
        The <section> is a 460vh scroll track; .spend-stage is pinned inside
        it. Scroll progress maps to a date between Jul 1 2025 and Jul 31 2026,
@@ -947,6 +915,41 @@
 
         </div>
       </div>
+
+  <!-- ========== CODA ==========
+       Two of the year's line items, standing in for the whole receipt. Both
+       are cut-outs on transparent backgrounds, so they sit straight on the
+       page's white surface with no frame or card around them — the pink tag
+       burned into each export is the only chrome they need, and it is already
+       the page's accent.
+
+       Closing the page rather than opening it: the charts above have done the
+       counting, and these two land as the year's most-ordered items. Still
+       decorative rather than evidential — the numbers on the tags are in the
+       alt text.
+       ================================================================== -->
+  <!-- Wontons first, croissant second — NOT alphabetical or arbitrary. The
+       pink tag is baked into the top-LEFT of the wonton export and the
+       top-RIGHT of the croissant one, so in this order the two tags bookend
+       the pair at the outer corners and the food meets in the middle. Reverse
+       them and both tags collide in the centre while the food is pushed out
+       to the page edges. Swapping these two <img> tags is all it takes. -->
+  <figure class="hero">
+    <img
+      class="hero__item"
+      src="images/food/wonton.png"
+      alt="A bowl of shrimp and pork wontons, tagged like a receipt line: 17 bowls ordered, $167.28 spent."
+      width="597"
+      height="511"
+    >
+    <img
+      class="hero__item hero__item--drop"
+      src="images/food/croissant.png"
+      alt="A croissant, tagged like a receipt line: 24 ordered, $96 spent."
+      width="965"
+      height="838"
+    >
+  </figure>
 
     <!-- Mobile Warning Modal -->
     <div id="deviceModal" class="modal">
