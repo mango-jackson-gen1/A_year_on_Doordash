@@ -312,49 +312,6 @@
       }
 
       /* ===================================================================
-         MOBILE WARNING MODAL
-         =================================================================== */
-
-      .modal {
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: var(--scrim);
-        justify-content: center;
-        align-items: center;
-        z-index: 9999;
-      }
-
-      .modal-content {
-        background: var(--surface);
-        padding: var(--sp-lg);
-        max-width: 25rem;
-        border-radius: 8px;
-        border-top: 3px solid var(--accent);
-        text-align: left;
-        font-family: var(--font-sans);
-        font-size: var(--fs-small);
-        line-height: 1.55;
-        color: var(--ink);
-        box-shadow: var(--shadow-card);
-      }
-
-      /* The card's copy is a bare <span>, so without this the button flows
-         inline at the end of the last sentence. */
-      .modal button {
-        display: block;
-        margin-top: var(--sp-md);
-        padding: var(--sp-xs) var(--sp-sm);
-        font-family: var(--font-sans);
-        font-size: var(--fs-small);
-        color: var(--surface);
-        background: var(--accent);
-        border: 0;
-        border-radius: 4px;
-        cursor: pointer;
-      }
-
-      /* ===================================================================
          SCROLLYTELLING MAP
          =================================================================== */
 
@@ -950,16 +907,6 @@
       height="838"
     >
   </figure>
-
-    <!-- Mobile Warning Modal -->
-    <div id="deviceModal" class="modal">
-      <div class="modal-content">
-        <span>
-          Wow! One of your friends must be in Aaron Reiss's "Telling Stories With Maps" class — how cool! <br><br> Sadly, this site is meant to be viewed on a computer, so if you are on a phone or tablet then it's gonna look all kinds of wonky and you might get the wrong impression about how amazing this work is.
-        </span>
-        <button id="continueBtn">Continue Anyway</button>
-      </div>
-    </div>
 
 <!-- ===== One year of delivery spending, scrubbed by scroll position ===== -->
 <script>
@@ -1933,23 +1880,6 @@ if ("ResizeObserver" in window && figureNode) {
 }
 
 })();
-</script>
-
-<!-- mobile phone warning modal -->
-<script>
-  document.addEventListener("DOMContentLoaded", function () {
-    const isSmallScreen = window.innerWidth <= 900;
-
-    if (isSmallScreen) {
-      document.getElementById("deviceModal").style.display = "flex";
-    }
-
-    document
-      .getElementById("continueBtn")
-      .addEventListener("click", function () {
-        document.getElementById("deviceModal").style.display = "none";
-      });
-  });
 </script>
 
   </body>
